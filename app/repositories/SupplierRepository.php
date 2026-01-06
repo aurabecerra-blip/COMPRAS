@@ -7,7 +7,18 @@ class SupplierRepository
 
     public function all(): array
     {
-        return $this->db->pdo()->query('SELECT * FROM suppliers ORDER BY name')->fetchAll();
+        $sql = 'SELECT s.*, 
+                    COUNT(DISTINCT q.id) AS quotations_count,
+                    AVG(q.lead_time_days) AS avg_lead_time,
+                    COUNT(DISTINCT po.id) AS pos_count,
+                    SUM(po.total_amount) AS pos_spend,
+                    SUM(po.status IN (\'CREADA\',\'ENVIADA_A_PROVEEDOR\',\'RECIBIDA_PARCIAL\')) AS open_pos
+                FROM suppliers s
+                LEFT JOIN quotations q ON q.supplier_id = s.id
+                LEFT JOIN purchase_orders po ON po.supplier_id = s.id
+                GROUP BY s.id
+                ORDER BY s.name';
+        return $this->db->pdo()->query($sql)->fetchAll();
     }
 
     public function find(int $id): ?array

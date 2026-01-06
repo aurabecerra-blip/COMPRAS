@@ -11,6 +11,7 @@ class PurchaseRequestController
         private Auth $auth,
         private Flash $flash,
         private SettingsRepository $settings,
+        private Mailer $mailer,
         private AuthMiddleware $authMiddleware
     ) {
     }
@@ -28,6 +29,7 @@ class PurchaseRequestController
         $this->authMiddleware->check();
         $this->auth->requireRole(['solicitante', 'administrador']);
         $suppliers = $this->supplierRepo->all();
+        $settingsRepo = $this->settings;
         include __DIR__ . '/../views/purchase_requests/create.php';
     }
 
@@ -39,6 +41,7 @@ class PurchaseRequestController
         $prId = $this->repo->create($this->auth->user()['id'], $data);
         $this->audit->log($this->auth->user()['id'], 'pr_create', ['pr_id' => $prId]);
         $this->handleUpload($prId);
+        $this->notifyLifecycle($this->repo->find($prId) ?? null, 'Solicitud creada');
         $this->flash->add('success', 'Solicitud creada');
         header('Location: ' . route_to('purchase_requests'));
     }
@@ -54,6 +57,7 @@ class PurchaseRequestController
             echo 'No encontrado';
             return;
         }
+        $settingsRepo = $this->settings;
         include __DIR__ . '/../views/purchase_requests/edit.php';
     }
 
@@ -88,6 +92,7 @@ class PurchaseRequestController
             } else {
                 $this->repo->changeStatus($id, 'ENVIADA');
                 $this->audit->log($this->auth->user()['id'], 'pr_send', ['pr_id' => $id]);
+                $this->notifyLifecycle($this->repo->find($id) ?? null, 'Solicitud enviada a aprobación');
                 $this->flash->add('success', 'Solicitud enviada');
             }
         }
@@ -103,6 +108,7 @@ class PurchaseRequestController
         if ($pr && $pr['status'] === 'ENVIADA') {
             $this->repo->changeStatus($id, 'APROBADA');
             $this->audit->log($this->auth->user()['id'], 'pr_approve', ['pr_id' => $id]);
+            $this->notifyLifecycle($this->repo->find($id) ?? null, 'Solicitud aprobada');
             $this->flash->add('success', 'Solicitud aprobada');
         }
         header('Location: ' . route_to('purchase_requests'));
@@ -121,6 +127,7 @@ class PurchaseRequestController
             } else {
                 $this->repo->reject($id, $reason);
                 $this->audit->log($this->auth->user()['id'], 'pr_reject', ['pr_id' => $id, 'reason' => $reason]);
+                $this->notifyLifecycle($this->repo->find($id) ?? null, 'Solicitud rechazada');
                 $this->flash->add('danger', 'Solicitud rechazada');
             }
         }
@@ -289,5 +296,34 @@ class PurchaseRequestController
             return asset_url('/uploads/' . $destName);
         }
         return null;
+    }
+
+    private function notifyLifecycle(?array $pr, string $title): void
+    {
+        if (!$pr) {
+            return;
+        }
+        $recipientsSetting = $this->settings->get('notification_recipients', '');
+        $recipients = array_filter(array_map('trim', explode(',', $recipientsSetting ?: '')));
+        $requesterEmail = $pr['requester_email'] ?? null;
+        if ($requesterEmail) {
+            $recipients[] = $requesterEmail;
+        }
+        $actorEmail = $this->auth->user()['email'] ?? null;
+        if ($actorEmail) {
+            $recipients[] = $actorEmail;
+        }
+        $recipients = array_values(array_unique(array_filter($recipients)));
+        if (empty($recipients)) {
+            return;
+        }
+        $trackLink = route_to('track', ['code' => $pr['tracking_code']]);
+        $body = '<p><strong>' . htmlspecialchars($title) . '</strong></p>';
+        $body .= '<p>Código: <strong>' . htmlspecialchars($pr['tracking_code']) . '</strong></p>';
+        $body .= '<p>Título: ' . htmlspecialchars($pr['title']) . '</p>';
+        $body .= '<p>Estado: ' . htmlspecialchars($pr['status']) . '</p>';
+        $body .= '<p><a href="' . htmlspecialchars($trackLink) . '">Ver seguimiento</a></p>';
+        $subject = '[Compras] ' . $title . ' (' . ($pr['tracking_code'] ?? 'PR') . ')';
+        $this->mailer->send($recipients, $subject, $body);
     }
 }

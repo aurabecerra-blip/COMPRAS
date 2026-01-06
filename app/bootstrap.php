@@ -55,3 +55,17 @@ $flash = new Flash();
 $auth = new Auth($db, $flash);
 $audit = new AuditLogger($db);
 $settingsRepo = new SettingsRepository($db);
+$mailer = new Mailer($config['mail']);
+
+if (!function_exists('setting_list')) {
+    function setting_list(SettingsRepository $repo, string $key, array $fallback = []): array
+    {
+        $raw = $repo->get($key, '');
+        if ($raw === '') {
+            return $fallback;
+        }
+        $items = preg_split('/[\r\n,]+/', $raw) ?: [];
+        $items = array_values(array_unique(array_filter(array_map('trim', $items), fn($i) => $i !== ''))));
+        return $items ?: $fallback;
+    }
+}

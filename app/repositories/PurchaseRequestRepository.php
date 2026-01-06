@@ -14,7 +14,7 @@ class PurchaseRequestRepository
 
     public function find(int $id): ?array
     {
-        $stmt = $this->db->pdo()->prepare('SELECT * FROM purchase_requests WHERE id = ?');
+        $stmt = $this->db->pdo()->prepare('SELECT pr.*, u.email AS requester_email FROM purchase_requests pr LEFT JOIN users u ON pr.requester_id = u.id WHERE pr.id = ?');
         $stmt->execute([$id]);
         $pr = $stmt->fetch();
         if (!$pr) {
@@ -26,8 +26,9 @@ class PurchaseRequestRepository
 
     public function create(int $requesterId, array $data): int
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
-        $stmt->execute([$requesterId, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
+        $tracking = $this->generateTrackingCode();
+        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
+        $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
         $prId = (int)$this->db->pdo()->lastInsertId();
         foreach ($data['items'] as $item) {
             $this->addItem($prId, $item);
@@ -82,5 +83,28 @@ class PurchaseRequestRepository
     public function canSend(array $pr): bool
     {
         return $pr['title'] !== '' && $pr['justification'] !== '' && $pr['area'] !== '' && $pr['cost_center'] !== '' && !empty($this->items((int)$pr['id']));
+    }
+
+    public function findByTracking(string $tracking): ?array
+    {
+        $stmt = $this->db->pdo()->prepare('SELECT pr.*, u.email AS requester_email FROM purchase_requests pr LEFT JOIN users u ON pr.requester_id = u.id WHERE tracking_code = ?');
+        $stmt->execute([$tracking]);
+        $pr = $stmt->fetch();
+        if (!$pr) {
+            return null;
+        }
+        $pr['items'] = $this->items((int)$pr['id']);
+        return $pr;
+    }
+
+    private function generateTrackingCode(): string
+    {
+        do {
+            $code = 'PR-' . strtoupper(bin2hex(random_bytes(3)));
+            $stmt = $this->db->pdo()->prepare('SELECT id FROM purchase_requests WHERE tracking_code = ?');
+            $stmt->execute([$code]);
+            $exists = $stmt->fetch();
+        } while ($exists);
+        return $code;
     }
 }
