@@ -2,7 +2,7 @@
 <h2>Solicitud #<?= $pr['id'] ?> - <?= htmlspecialchars($pr['title']) ?></h2>
 <p>Estado actual: <strong><?= $pr['status'] ?></strong></p>
 <?php if ($pr['status'] === 'BORRADOR'): ?>
-<form method="post" action="/index.php?page=purchase_request_update" enctype="multipart/form-data">
+<form method="post" action="<?= htmlspecialchars(route_to('purchase_request_update')) ?>" enctype="multipart/form-data">
     <input type="hidden" name="id" value="<?= $pr['id'] ?>">
     <div class="mb-3">
         <label class="form-label">Título</label>

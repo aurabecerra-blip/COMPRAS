@@ -25,7 +25,7 @@
     </tbody>
 </table>
 <h5>Registrar recepción</h5>
-<form method="post" action="/index.php?page=po_receive">
+<form method="post" action="<?= htmlspecialchars(route_to('po_receive')) ?>">
     <input type="hidden" name="po_id" value="<?= $po['id'] ?>">
     <?php for ($i=0;$i<2;$i++): ?>
         <div class="row g-2 mb-2">
@@ -44,7 +44,7 @@
     <?php endforeach; ?>
     </tbody>
 </table>
-<form method="post" action="/index.php?page=po_invoice" class="mb-3">
+<form method="post" action="<?= htmlspecialchars(route_to('po_invoice')) ?>" class="mb-3">
     <input type="hidden" name="po_id" value="<?= $po['id'] ?>">
     <div class="row g-2 mb-2">
         <div class="col-md-6"><input type="text" name="invoice_number" class="form-control" placeholder="Nº factura"></div>
@@ -53,7 +53,7 @@
     <button class="btn btn-outline-success">Registrar factura</button>
 </form>
 <h4>Cierre de OC</h4>
-<form method="post" action="/index.php?page=po_close">
+<form method="post" action="<?= htmlspecialchars(route_to('po_close')) ?>">
     <input type="hidden" name="po_id" value="<?= $po['id'] ?>">
     <div class="mb-2"><textarea name="reason" class="form-control" placeholder="Justifique si no hay recepción total"></textarea></div>
     <button class="btn btn-danger">Cerrar OC</button>

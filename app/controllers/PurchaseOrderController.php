@@ -9,12 +9,14 @@ class PurchaseOrderController
         private InvoiceRepository $invoiceRepo,
         private AuditLogger $audit,
         private Auth $auth,
-        private Flash $flash
+        private Flash $flash,
+        private AuthMiddleware $authMiddleware
     ) {
     }
 
     public function show(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['buyer', 'receiver', 'accountant', 'admin']);
         $id = (int)($_GET['id'] ?? 0);
         $po = $this->fetchPo($id);
@@ -44,17 +46,19 @@ class PurchaseOrderController
 
     public function receive(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['receiver', 'buyer', 'admin']);
         $poId = (int)($_POST['po_id'] ?? 0);
         $items = array_filter($_POST['items'] ?? [], fn($i) => !empty($i['description']) && $i['quantity'] > 0);
         $this->receptionRepo->create($poId, $items, $this->auth->user()['id']);
         $this->audit->log($this->auth->user()['id'], 'po_receive', ['po_id' => $poId]);
         $this->flash->add('success', 'Recepción registrada');
-        header('Location: /index.php?page=purchase_orders&id=' . $poId);
+        header('Location: ' . route_to('purchase_orders', ['id' => $poId]));
     }
 
     public function addInvoice(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['accountant', 'admin']);
         $poId = (int)($_POST['po_id'] ?? 0);
         $data = [
@@ -64,11 +68,12 @@ class PurchaseOrderController
         $this->invoiceRepo->create($poId, $data, $this->auth->user()['id']);
         $this->audit->log($this->auth->user()['id'], 'invoice_register', ['po_id' => $poId]);
         $this->flash->add('success', 'Factura registrada');
-        header('Location: /index.php?page=purchase_orders&id=' . $poId);
+        header('Location: ' . route_to('purchase_orders', ['id' => $poId]));
     }
 
     public function close(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['buyer', 'admin']);
         $poId = (int)($_POST['po_id'] ?? 0);
         $reason = trim($_POST['reason'] ?? '');
@@ -83,6 +88,6 @@ class PurchaseOrderController
         } else {
             $this->flash->add('danger', 'Se requiere recepción total o justificación para cerrar');
         }
-        header('Location: /index.php?page=purchase_orders&id=' . $poId);
+        header('Location: ' . route_to('purchase_orders', ['id' => $poId]));
     }
 }

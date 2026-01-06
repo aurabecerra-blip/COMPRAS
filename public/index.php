@@ -1,10 +1,12 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
 
-$page = $_GET['page'] ?? 'dashboard';
+$page = $_GET['page'] ?? ($auth->user() ? 'dashboard' : 'login');
+
+$authMiddleware = new AuthMiddleware($auth, $flash);
 
 $authController = new AuthController($auth, $flash, $audit);
-$dashboardController = new DashboardController($db);
+$dashboardController = new DashboardController($db, $authMiddleware);
 $prController = new PurchaseRequestController(
     new PurchaseRequestRepository($db),
     new SupplierRepository($db),
@@ -14,7 +16,8 @@ $prController = new PurchaseRequestController(
     $audit,
     $auth,
     $flash,
-    $settingsRepo
+    $settingsRepo,
+    $authMiddleware
 );
 $poController = new PurchaseOrderController(
     $db,
@@ -24,13 +27,18 @@ $poController = new PurchaseOrderController(
     new InvoiceRepository($db),
     $audit,
     $auth,
-    $flash
+    $flash,
+    $authMiddleware
 );
-$supplierController = new SupplierController(new SupplierRepository($db), $flash, $audit, $auth);
-$adminController = new AdminController($settingsRepo, new UserRepository($db), $flash, $audit, $auth);
-$auditController = new AuditController($db, $auth);
+$supplierController = new SupplierController(new SupplierRepository($db), $flash, $audit, $auth, $authMiddleware);
+$adminController = new AdminController($settingsRepo, new UserRepository($db), $flash, $audit, $auth, $authMiddleware);
+$auditController = new AuditController($db, $auth, $authMiddleware);
 
 if ($page === 'login') {
+    if ($auth->user()) {
+        header('Location: ' . route_to('dashboard'));
+        exit;
+    }
     $authController->login();
     exit;
 }
@@ -40,14 +48,11 @@ if ($page === 'login_submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 if ($page === 'logout') {
     $auth->logout();
-    header('Location: /index.php?page=login');
+    header('Location: ' . route_to('login'));
     exit;
 }
 
-if (!$auth->user()) {
-    header('Location: /index.php?page=login');
-    exit;
-}
+$authMiddleware->check();
 
 switch ($page) {
     case 'dashboard':

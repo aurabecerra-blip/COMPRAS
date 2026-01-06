@@ -13,13 +13,13 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="text-center mb-3">
-                        <img src="/public/assets/aos-logo.svg" alt="AOS" style="height:48px;">
+                        <img src="<?= htmlspecialchars(asset_url('/public/assets/aos-logo.svg')) ?>" alt="AOS" style="height:48px;">
                         <h5 class="mt-2">Control de compras</h5>
                     </div>
                     <?php foreach (($flash->getAll()) as $msg): ?>
                         <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>"><?= htmlspecialchars($msg['message']) ?></div>
                     <?php endforeach; ?>
-                    <form method="post" action="/index.php?page=login_submit">
+                    <form method="post" action="<?= htmlspecialchars(route_to('login_submit')) ?>">
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" name="email" class="form-control" required>

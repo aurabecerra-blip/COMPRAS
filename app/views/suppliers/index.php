@@ -16,7 +16,7 @@
     </tbody>
 </table>
 <h4>Nuevo proveedor</h4>
-<form method="post" action="/index.php?page=supplier_store">
+<form method="post" action="<?= htmlspecialchars(route_to('supplier_store')) ?>">
     <div class="row g-2 mb-2">
         <div class="col-md-3"><input type="text" name="name" class="form-control" placeholder="Nombre" required></div>
         <div class="col-md-3"><input type="text" name="contact" class="form-control" placeholder="Contacto"></div>

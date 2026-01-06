@@ -15,7 +15,7 @@
     </tbody>
 </table>
 <h4>Agregar cotización</h4>
-<form method="post" action="/index.php?page=quotation_store">
+<form method="post" action="<?= htmlspecialchars(route_to('quotation_store')) ?>">
     <input type="hidden" name="pr_id" value="<?= $pr['id'] ?>">
     <div class="row g-2 mb-2">
         <div class="col-md-4">
@@ -32,7 +32,7 @@
 </form>
 <?php if ($pr['status'] === 'APROBADA'): ?>
     <h4 class="mt-4">Generar Orden de Compra</h4>
-    <form method="post" action="/index.php?page=purchase_order_create">
+    <form method="post" action="<?= htmlspecialchars(route_to('purchase_order_create')) ?>">
         <input type="hidden" name="pr_id" value="<?= $pr['id'] ?>">
         <div class="row g-2 mb-2">
             <div class="col-md-6">
