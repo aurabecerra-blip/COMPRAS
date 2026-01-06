@@ -1,7 +1,7 @@
 <?php
 class PurchaseRequestRepository
 {
-    private const STATUSES = ['BORRADOR', 'ENVIADA', 'EN_APROBACION', 'APROBADA', 'RECHAZADA'];
+    private const STATUSES = ['BORRADOR', 'ENVIADA', 'APROBADA', 'RECHAZADA', 'CANCELADA'];
 
     public function __construct(private Database $db)
     {
@@ -26,8 +26,8 @@ class PurchaseRequestRepository
 
     public function create(int $requesterId, array $data): int
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, title, description, status, created_at) VALUES (?, ?, ?, "BORRADOR", NOW())');
-        $stmt->execute([$requesterId, $data['title'], $data['description']]);
+        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
+        $stmt->execute([$requesterId, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
         $prId = (int)$this->db->pdo()->lastInsertId();
         foreach ($data['items'] as $item) {
             $this->addItem($prId, $item);
@@ -37,8 +37,8 @@ class PurchaseRequestRepository
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, description = ? WHERE id = ? AND status = "BORRADOR"');
-        $stmt->execute([$data['title'], $data['description'], $id]);
+        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, description = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
+        $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description'], $id]);
         $this->db->pdo()->prepare('DELETE FROM pr_items WHERE purchase_request_id = ?')->execute([$id]);
         foreach ($data['items'] as $item) {
             $this->addItem($id, $item);
@@ -63,7 +63,18 @@ class PurchaseRequestRepository
         if (!in_array($status, self::STATUSES, true)) {
             throw new InvalidArgumentException('Estado inválido');
         }
-        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET status = ? WHERE id = ?');
+        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET status = ?, rejection_reason = NULL, updated_at = NOW() WHERE id = ?');
         $stmt->execute([$status, $id]);
+    }
+
+    public function reject(int $id, string $reason): void
+    {
+        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET status = "RECHAZADA", rejection_reason = ?, updated_at = NOW() WHERE id = ?');
+        $stmt->execute([$reason, $id]);
+    }
+
+    public function canSend(array $pr): bool
+    {
+        return $pr['title'] !== '' && $pr['justification'] !== '' && $pr['area'] !== '' && $pr['cost_center'] !== '' && !empty($this->items((int)$pr['id']));
     }
 }

@@ -5,16 +5,16 @@ class AttachmentRepository
     {
     }
 
-    public function add(int $prId, string $path, string $originalName, int $userId): void
+    public function add(string $entityType, int $entityId, string $path, string $originalName, int $userId): void
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO attachments (purchase_request_id, file_path, original_name, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, NOW())');
-        $stmt->execute([$prId, $path, $originalName, $userId]);
+        $stmt = $this->db->pdo()->prepare('INSERT INTO attachments (entity_type, entity_id, file_path, original_name, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, NOW())');
+        $stmt->execute([$entityType, $entityId, $path, $originalName, $userId]);
     }
 
-    public function forPr(int $prId): array
+    public function forEntity(string $entityType, int $entityId): array
     {
-        $stmt = $this->db->pdo()->prepare('SELECT * FROM attachments WHERE purchase_request_id = ?');
-        $stmt->execute([$prId]);
+        $stmt = $this->db->pdo()->prepare('SELECT * FROM attachments WHERE entity_type = ? AND entity_id = ?');
+        $stmt->execute([$entityType, $entityId]);
         return $stmt->fetchAll();
     }
 }

@@ -1,6 +1,6 @@
 # Compras AOS
 
-Aplicativo web ligero en PHP 8 + MySQL para control de compras alineado al flujo PR-PO-Recepción-Factura.
+Aplicativo web en PHP 8 + MySQL para control de compras alineado al flujo ISO 9001 de Solicitud → Cotización → Orden de compra → Recepción.
 
 ## Requisitos
 - PHP 8 con extensiones `pdo_mysql` y `mbstring`.
@@ -21,14 +21,15 @@ Aplicativo web ligero en PHP 8 + MySQL para control de compras alineado al flujo
 - Contraseña temporal: `Cambiar123` (cambiar al primer inicio de sesión).
 
 ## Características clave
-- Login con `password_hash` / `password_verify` y sesiones.
-- Roles: admin, requester, approver, buyer, receiver, accountant.
-- Módulos: Dashboard, Solicitudes de compra (PR), Cotizaciones, Órdenes de compra (PO), Recepciones, Facturas, Proveedores, Auditoría y Administración.
-- Flujo PR (borrador → enviada → en aprobación → aprobada/rechazada) con bloqueo de creación de PO si la PR no está aprobada.
-- Recepción parcial/total y cierre de OC con validación de recepción o justificación.
-- Adjuntos (PDF/imagen) en `/public/uploads` registrados en tabla `attachments`.
+- Login obligatorio con `password_hash` / `password_verify` y sesiones.
+- Roles: administrador, solicitante, aprobador, compras, recepcion.
+- Flujo de Solicitud de compra (BORRADOR → ENVIADA → APROBADA / RECHAZADA / CANCELADA) con validaciones de justificación, área, centro de costo e ítems.
+- Cotizaciones con PDF, monto y plazo; selección de proveedor y generación de OC desde solicitud aprobada.
+- Flujo de OC: CREADA → ENVIADA A PROVEEDOR → RECIBIDA PARCIAL → RECIBIDA TOTAL → CERRADA, con control por recepciones y justificación de cierre parcial.
+- Recepción por ítem con evidencia opcional (PDF/imagen).
+- Adjuntos almacenados en `/public/uploads` y auditados.
 - Bitácora de auditoría con detalle JSON en `audit_log`.
-- Bootstrap con navbar y branding AOS configurable desde `settings`.
+- Bootstrap 5 con branding AOS configurable (`company_name`, `brand_logo_path`, colores).
 
 ## Estructura
 - `public/`: punto de entrada `index.php`, assets y uploads.
@@ -37,7 +38,7 @@ Aplicativo web ligero en PHP 8 + MySQL para control de compras alineado al flujo
 
 ## Seguridad básica
 - Validaciones del lado servidor para entradas obligatorias.
-- Autorización por roles en acciones sensibles (aprobaciones, compras, recepción, contabilidad, administración).
+- Autorización por roles en acciones sensibles (aprobaciones, compras, recepción, administración).
 
 ## Notas
 - Las rutas del front se resuelven mediante `index.php?page=<ruta>`.

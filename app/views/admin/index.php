@@ -12,6 +12,16 @@
                 <label class="form-label">Ruta logo</label>
                 <input type="text" name="brand_logo_path" class="form-control" value="<?= htmlspecialchars($settingsRepo->get('brand_logo_path', asset_url('/assets/aos-logo.svg'))) ?>">
             </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                    <label class="form-label">Color primario</label>
+                    <input type="color" name="brand_primary_color" class="form-control form-control-color" value="<?= htmlspecialchars($settingsRepo->get('brand_primary_color', '#0d6efd')) ?>">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Color acento</label>
+                    <input type="color" name="brand_accent_color" class="form-control form-control-color" value="<?= htmlspecialchars($settingsRepo->get('brand_accent_color', '#198754')) ?>">
+                </div>
+            </div>
             <button class="btn btn-primary">Guardar</button>
         </form>
     </div>
@@ -30,12 +40,11 @@
                 <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Nombre"></div>
                 <div class="col-md-4"><input type="email" name="email" class="form-control" placeholder="Email"></div>
                 <div class="col-md-4"><select name="role" class="form-select">
-                    <option value="admin">Admin</option>
-                    <option value="requester">Requester</option>
-                    <option value="approver">Approver</option>
-                    <option value="buyer">Buyer</option>
-                    <option value="receiver">Receiver</option>
-                    <option value="accountant">Accountant</option>
+                    <option value="administrador">Administrador</option>
+                    <option value="solicitante">Solicitante</option>
+                    <option value="aprobador">Aprobador</option>
+                    <option value="compras">Compras</option>
+                    <option value="recepcion">Recepción</option>
                 </select></div>
             </div>
             <div class="mb-2">

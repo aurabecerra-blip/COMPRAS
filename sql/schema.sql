@@ -30,10 +30,17 @@ CREATE TABLE purchase_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
     requester_id INT NOT NULL,
     title VARCHAR(200) NOT NULL,
-    description TEXT,
-    status ENUM('BORRADOR','ENVIADA','EN_APROBACION','APROBADA','RECHAZADA') NOT NULL DEFAULT 'BORRADOR',
+    justification TEXT NOT NULL,
+    area VARCHAR(150) NOT NULL,
+    cost_center VARCHAR(100) NOT NULL,
+    status ENUM('BORRADOR','ENVIADA','APROBADA','RECHAZADA','CANCELADA') NOT NULL DEFAULT 'BORRADOR',
+    rejection_reason TEXT NULL,
+    selected_supplier_id INT NULL,
+    selection_notes TEXT NULL,
     created_at DATETIME NOT NULL,
-    FOREIGN KEY (requester_id) REFERENCES users(id)
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY (requester_id) REFERENCES users(id),
+    FOREIGN KEY (selected_supplier_id) REFERENCES suppliers(id)
 );
 
 CREATE TABLE pr_items (
@@ -50,7 +57,9 @@ CREATE TABLE quotations (
     purchase_request_id INT NOT NULL,
     supplier_id INT NOT NULL,
     amount DECIMAL(12,2) NOT NULL,
+    lead_time_days INT NOT NULL,
     notes VARCHAR(255),
+    pdf_path VARCHAR(255) NOT NULL,
     created_at DATETIME NOT NULL,
     FOREIGN KEY (purchase_request_id) REFERENCES purchase_requests(id),
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
@@ -61,9 +70,11 @@ CREATE TABLE purchase_orders (
     purchase_request_id INT NOT NULL,
     supplier_id INT NOT NULL,
     total_amount DECIMAL(12,2) NOT NULL,
-    status ENUM('ABIERTA','CERRADA') NOT NULL DEFAULT 'ABIERTA',
+    status ENUM('CREADA','ENVIADA A PROVEEDOR','RECIBIDA PARCIAL','RECIBIDA TOTAL','CERRADA') NOT NULL DEFAULT 'CREADA',
     close_reason TEXT,
+    sent_at DATETIME NULL,
     created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
     FOREIGN KEY (purchase_request_id) REFERENCES purchase_requests(id),
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
 );
@@ -81,6 +92,8 @@ CREATE TABLE receipts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     purchase_order_id INT NOT NULL,
     received_by INT NOT NULL,
+    evidence_path VARCHAR(255) NULL,
+    notes TEXT NULL,
     created_at DATETIME NOT NULL,
     FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id),
     FOREIGN KEY (received_by) REFERENCES users(id)
@@ -89,30 +102,20 @@ CREATE TABLE receipts (
 CREATE TABLE receipt_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     receipt_id INT NOT NULL,
-    description VARCHAR(200) NOT NULL,
+    po_item_id INT NOT NULL,
     quantity DECIMAL(12,2) NOT NULL,
-    FOREIGN KEY (receipt_id) REFERENCES receipts(id) ON DELETE CASCADE
-);
-
-CREATE TABLE invoices (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    purchase_order_id INT NOT NULL,
-    invoice_number VARCHAR(100) NOT NULL,
-    amount DECIMAL(12,2) NOT NULL,
-    registered_by INT NOT NULL,
-    created_at DATETIME NOT NULL,
-    FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id),
-    FOREIGN KEY (registered_by) REFERENCES users(id)
+    FOREIGN KEY (receipt_id) REFERENCES receipts(id) ON DELETE CASCADE,
+    FOREIGN KEY (po_item_id) REFERENCES po_items(id) ON DELETE CASCADE
 );
 
 CREATE TABLE attachments (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    purchase_request_id INT NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id INT NOT NULL,
     file_path VARCHAR(255) NOT NULL,
     original_name VARCHAR(255) NOT NULL,
     uploaded_by INT NOT NULL,
     uploaded_at DATETIME NOT NULL,
-    FOREIGN KEY (purchase_request_id) REFERENCES purchase_requests(id),
     FOREIGN KEY (uploaded_by) REFERENCES users(id)
 );
 
@@ -126,11 +129,13 @@ CREATE TABLE audit_log (
 );
 
 INSERT INTO roles (name) VALUES
-('admin'), ('requester'), ('approver'), ('buyer'), ('receiver'), ('accountant');
+('administrador'), ('solicitante'), ('aprobador'), ('compras'), ('recepcion');
 
 INSERT INTO users (name, email, role, password_hash, created_at) VALUES
-('Administrador', 'admin@aos.com', 'admin', '$2y$12$QwXRK91/HPm0QYeCtNJkRezlaA1LAO.qWms4JfEQ7QJfJGMrrY6Mu', NOW());
+('Administrador', 'admin@aos.com', 'administrador', '$2y$12$QwXRK91/HPm0QYeCtNJkRezlaA1LAO.qWms4JfEQ7QJfJGMrrY6Mu', NOW());
 
 INSERT INTO settings (`key`, value) VALUES
 ('company_name', 'AOS'),
-('brand_logo_path', '/public/assets/aos-logo.svg');
+('brand_logo_path', '/assets/aos-logo.svg'),
+('brand_primary_color', '#0d6efd'),
+('brand_accent_color', '#198754');

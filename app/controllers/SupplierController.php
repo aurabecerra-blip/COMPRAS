@@ -8,7 +8,7 @@ class SupplierController
     public function index(): void
     {
         $this->authMiddleware->check();
-        $this->auth->requireRole(['buyer', 'admin']);
+        $this->auth->requireRole(['compras', 'administrador']);
         $suppliers = $this->repo->all();
         include __DIR__ . '/../views/suppliers/index.php';
     }
@@ -16,7 +16,7 @@ class SupplierController
     public function store(): void
     {
         $this->authMiddleware->check();
-        $this->auth->requireRole(['buyer', 'admin']);
+        $this->auth->requireRole(['compras', 'administrador']);
         $data = [
             'name' => trim($_POST['name'] ?? ''),
             'contact' => trim($_POST['contact'] ?? ''),

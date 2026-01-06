@@ -9,6 +9,20 @@
         <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($pr['title']) ?>" required>
     </div>
     <div class="mb-3">
+        <label class="form-label">Justificación</label>
+        <textarea name="justification" class="form-control" rows="2" required><?= htmlspecialchars($pr['justification']) ?></textarea>
+    </div>
+    <div class="row g-2 mb-3">
+        <div class="col-md-6">
+            <label class="form-label">Área</label>
+            <input type="text" name="area" class="form-control" value="<?= htmlspecialchars($pr['area']) ?>" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Centro de costo</label>
+            <input type="text" name="cost_center" class="form-control" value="<?= htmlspecialchars($pr['cost_center']) ?>" required>
+        </div>
+    </div>
+    <div class="mb-3">
         <label class="form-label">Descripción</label>
         <textarea name="description" class="form-control" rows="3"><?= htmlspecialchars($pr['description']) ?></textarea>
     </div>
