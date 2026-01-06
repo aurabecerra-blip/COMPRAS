@@ -10,6 +10,7 @@ class AdminController
         $this->auth->requireRole(['admin']);
         $settings = $this->settings->all();
         $users = $this->users->all();
+        $settingsRepo = $this->settings;
         include __DIR__ . '/../views/admin/index.php';
     }
 

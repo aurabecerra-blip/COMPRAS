@@ -1,6 +1,7 @@
 <?php
-$brandName = $settingsRepo->get('company_name', 'AOS');
-$brandLogo = $settingsRepo->get('brand_logo_path', '/public/assets/aos-logo.svg');
+$settingsRepo = $settingsRepo ?? ($GLOBALS['settingsRepo'] ?? null);
+$brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
+$brandLogo = $settingsRepo ? $settingsRepo->get('brand_logo_path', '/public/assets/aos-logo.svg') : '/public/assets/aos-logo.svg';
 ?>
 <!doctype html>
 <html lang="es">
