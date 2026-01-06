@@ -16,10 +16,11 @@ class Auth
         $stmt->execute([$email]);
         $user = $stmt->fetch();
         if ($user && password_verify($password, $user['password_hash'])) {
+            $normalizedRole = strtolower($user['role']);
             $_SESSION['user'] = [
                 'id' => $user['id'],
                 'email' => $user['email'],
-                'role' => $user['role'],
+                'role' => $normalizedRole,
                 'name' => $user['name'],
             ];
             $this->flash->add('success', 'Inicio de sesión exitoso');
@@ -31,13 +32,20 @@ class Auth
 
     public function user(): ?array
     {
-        return $_SESSION['user'] ?? null;
+        if (!isset($_SESSION['user'])) {
+            return null;
+        }
+        $user = $_SESSION['user'];
+        $user['role'] = strtolower($user['role'] ?? '');
+        $_SESSION['user']['role'] = $user['role'];
+        return $user;
     }
 
     public function requireRole(array $roles): void
     {
         $user = $this->user();
-        if (!$user || !in_array($user['role'], $roles, true)) {
+        $role = strtolower($user['role'] ?? '');
+        if (!$user || !in_array($role, $roles, true)) {
             header('Location: ' . route_to('login'));
             exit;
         }
