@@ -4,7 +4,7 @@ $auth = $auth ?? ($GLOBALS['auth'] ?? null);
 $flash = $flash ?? ($GLOBALS['flash'] ?? null);
 
 $brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
-$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', asset_url('/assets/aos-logo.svg')) : asset_url('/assets/aos-logo.svg');
+$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', 'assets/aos-logo.svg') : 'assets/aos-logo.svg';
 $brandLogo = str_starts_with($brandLogoSetting, 'http') ? $brandLogoSetting : asset_url($brandLogoSetting);
 $brandPrimary = $settingsRepo ? $settingsRepo->get('brand_primary_color', '#0d6efd') : '#0d6efd';
 $brandAccent = $settingsRepo ? $settingsRepo->get('brand_accent_color', '#198754') : '#198754';
@@ -52,36 +52,59 @@ $flashMessages = $flash ? $flash->getAll() : [];
 </head>
 <body>
 <?php $role = $authUser['role'] ?? ''; ?>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="<?= htmlspecialchars(route_to('dashboard')) ?>">
-            <img src="<?= htmlspecialchars($brandLogo) ?>" alt="AOS" style="height:32px" class="me-2 align-text-top">
-            <?= htmlspecialchars($brandName) ?>
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('dashboard')) ?>">Dashboard</a></li>
-                <?php if (in_array($role, ['solicitante','aprobador','compras','recepcion','administrador'], true)): ?>
-                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('purchase_requests')) ?>">Solicitudes</a></li>
-                <?php endif; ?>
-                <?php if (in_array($role, ['compras','administrador'], true)): ?>
-                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('suppliers')) ?>">Proveedores</a></li>
-                <?php endif; ?>
-                <?php if (in_array($role, ['administrador'], true)): ?>
-                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('audit')) ?>">Auditoría</a></li>
-                <?php endif; ?>
-                <?php if ($role === 'administrador'): ?>
-                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('admin')) ?>">Administración</a></li>
-                <?php endif; ?>
-            </ul>
-            <span class="navbar-text me-3"><?= htmlspecialchars($authUser['email'] ?? '') ?> (<?= htmlspecialchars($authUser['role'] ?? '') ?>)</span>
-            <a href="<?= htmlspecialchars(route_to('logout')) ?>" class="btn btn-outline-light">Salir</a>
+<?php
+$navItems = [
+    ['label' => 'Dashboard', 'route' => route_to('dashboard')],
+];
+switch ($role) {
+    case 'solicitante':
+        $navItems[] = ['label' => 'Solicitudes', 'route' => route_to('purchase_requests')];
+        break;
+    case 'aprobador':
+        $navItems[] = ['label' => 'Solicitudes pendientes', 'route' => route_to('purchase_requests')];
+        break;
+    case 'compras':
+        $navItems[] = ['label' => 'Solicitudes', 'route' => route_to('purchase_requests')];
+        $navItems[] = ['label' => 'Cotizaciones', 'route' => route_to('purchase_requests')];
+        $navItems[] = ['label' => 'Proveedores', 'route' => route_to('suppliers')];
+        $navItems[] = ['label' => 'Órdenes de compra', 'route' => route_to('purchase_orders')];
+        break;
+    case 'recepcion':
+        $navItems[] = ['label' => 'Órdenes de compra', 'route' => route_to('purchase_orders')];
+        $navItems[] = ['label' => 'Recepción', 'route' => route_to('purchase_orders')];
+        break;
+    case 'administrador':
+        $navItems[] = ['label' => 'Solicitudes', 'route' => route_to('purchase_requests')];
+        $navItems[] = ['label' => 'Cotizaciones', 'route' => route_to('purchase_requests')];
+        $navItems[] = ['label' => 'Proveedores', 'route' => route_to('suppliers')];
+        $navItems[] = ['label' => 'Órdenes de compra', 'route' => route_to('purchase_orders')];
+        $navItems[] = ['label' => 'Auditoría', 'route' => route_to('audit')];
+        $navItems[] = ['label' => 'Administración', 'route' => route_to('admin')];
+        break;
+}
+?>
+<?php if ($authUser): ?>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="<?= htmlspecialchars(route_to('dashboard')) ?>">
+                <img src="<?= htmlspecialchars($brandLogo) ?>" alt="AOS" style="height:32px" class="me-2 align-text-top">
+                <?= htmlspecialchars($brandName) ?>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <?php foreach ($navItems as $item): ?>
+                        <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars($item['route']) ?>"><?= htmlspecialchars($item['label']) ?></a></li>
+                    <?php endforeach; ?>
+                </ul>
+                <span class="navbar-text me-3"><?= htmlspecialchars($authUser['email'] ?? '') ?> (<?= htmlspecialchars($authUser['role'] ?? '') ?>)</span>
+                <a href="<?= htmlspecialchars(route_to('logout')) ?>" class="btn btn-outline-light">Salir</a>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
+<?php endif; ?>
 <div class="container">
     <?php foreach ($flashMessages as $msg): ?>
         <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>"><?= htmlspecialchars($msg['message']) ?></div>

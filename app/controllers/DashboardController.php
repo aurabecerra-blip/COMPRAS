@@ -19,7 +19,7 @@ class DashboardController
             'cancelled_prs' => (int)$pdo->query("SELECT COUNT(*) FROM purchase_requests WHERE status = 'CANCELADA'")->fetchColumn(),
             'quotations' => (int)$pdo->query('SELECT COUNT(*) FROM quotations')->fetchColumn(),
             'pos' => (int)$pdo->query('SELECT COUNT(*) FROM purchase_orders')->fetchColumn(),
-            'pos_open' => (int)$pdo->query("SELECT COUNT(*) FROM purchase_orders WHERE status IN ('CREADA','ENVIADA A PROVEEDOR','RECIBIDA PARCIAL')")->fetchColumn(),
+            'pos_open' => (int)$pdo->query("SELECT COUNT(*) FROM purchase_orders WHERE status IN ('CREADA','ENVIADA_A_PROVEEDOR','RECIBIDA_PARCIAL')")->fetchColumn(),
             'pos_closed' => (int)$pdo->query("SELECT COUNT(*) FROM purchase_orders WHERE status = 'CERRADA'")->fetchColumn(),
             'receipts' => (int)$pdo->query('SELECT COUNT(*) FROM receipts')->fetchColumn(),
             'suppliers' => (int)$pdo->query('SELECT COUNT(*) FROM suppliers')->fetchColumn(),
