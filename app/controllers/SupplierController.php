@@ -1,0 +1,34 @@
+<?php
+class SupplierController
+{
+    public function __construct(private SupplierRepository $repo, private Flash $flash, private AuditLogger $audit, private Auth $auth)
+    {
+    }
+
+    public function index(): void
+    {
+        $this->auth->requireRole(['buyer', 'admin']);
+        $suppliers = $this->repo->all();
+        include __DIR__ . '/../views/suppliers/index.php';
+    }
+
+    public function store(): void
+    {
+        $this->auth->requireRole(['buyer', 'admin']);
+        $data = [
+            'name' => trim($_POST['name'] ?? ''),
+            'contact' => trim($_POST['contact'] ?? ''),
+            'email' => trim($_POST['email'] ?? ''),
+            'phone' => trim($_POST['phone'] ?? ''),
+        ];
+        if ($data['name'] === '') {
+            $this->flash->add('danger', 'El nombre es obligatorio');
+            header('Location: /index.php?page=suppliers');
+            return;
+        }
+        $this->repo->create($data);
+        $this->audit->log($this->auth->user()['id'], 'supplier_create', $data);
+        $this->flash->add('success', 'Proveedor registrado');
+        header('Location: /index.php?page=suppliers');
+    }
+}
