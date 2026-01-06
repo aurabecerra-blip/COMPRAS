@@ -10,6 +10,8 @@ require __DIR__ . '/../app/bootstrap.php';
 $page = $_GET['page'] ?? ($auth->user() ? 'dashboard' : 'login');
 
 $authMiddleware = new AuthMiddleware($auth, $flash);
+$mailer = new Mailer($config['mail']);
+$trackingController = new TrackingController(new PurchaseRequestRepository($db), $settingsRepo, $flash);
 
 $authController = new AuthController($auth, $flash, $audit);
 $dashboardController = new DashboardController($db, $authMiddleware);
@@ -23,6 +25,7 @@ $prController = new PurchaseRequestController(
     $auth,
     $flash,
     $settingsRepo,
+    $mailer,
     $authMiddleware
 );
 $poController = new PurchaseOrderController(
@@ -53,6 +56,14 @@ if ($page === 'do_login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 if ($page === 'logout') {
     $authController->logout();
+}
+
+$publicPages = ['track'];
+if (in_array($page, $publicPages, true)) {
+    if ($page === 'track') {
+        $trackingController->show();
+    }
+    exit;
 }
 
 $authMiddleware->check();
