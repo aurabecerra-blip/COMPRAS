@@ -65,7 +65,7 @@ if (!function_exists('setting_list')) {
             return $fallback;
         }
         $items = preg_split('/[\r\n,]+/', $raw) ?: [];
-        $items = array_values(array_unique(array_filter(array_map('trim', $items), fn($i) => $i !== ''))));
+        $items = array_values(array_unique(array_filter(array_map('trim', $items), fn($i) => $i !== '')));
         return $items ?: $fallback;
     }
 }
