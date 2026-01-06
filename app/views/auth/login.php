@@ -13,7 +13,7 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="text-center mb-3">
-                        <img src="<?= htmlspecialchars(asset_url('/public/assets/aos-logo.svg')) ?>" alt="AOS" style="height:48px;">
+                        <img src="<?= htmlspecialchars(asset_url('/assets/aos-logo.svg')) ?>" alt="AOS" style="height:48px;">
                         <h5 class="mt-2">Control de compras</h5>
                     </div>
                     <?php foreach (($flash->getAll()) as $msg): ?>

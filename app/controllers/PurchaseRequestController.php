@@ -232,7 +232,7 @@ class PurchaseRequestController
         $destName = uniqid('att_') . '_' . basename($file['name']);
         $dest = $uploadDir . '/' . $destName;
         if (move_uploaded_file($file['tmp_name'], $dest)) {
-            $publicPath = asset_url('/public/uploads/' . $destName);
+            $publicPath = asset_url('/uploads/' . $destName);
             $this->attachmentRepo->add($prId, $publicPath, $file['name'], $this->auth->user()['id']);
             $this->audit->log($this->auth->user()['id'], 'attachment_upload', ['pr_id' => $prId, 'file' => $destName]);
         }

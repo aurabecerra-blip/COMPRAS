@@ -22,7 +22,7 @@ class AdminController
         $company = trim($_POST['company_name'] ?? '');
         $logo = trim($_POST['brand_logo_path'] ?? '');
         $this->settings->set('company_name', $company ?: 'AOS');
-        $this->settings->set('brand_logo_path', $logo ?: asset_url('/public/assets/aos-logo.svg'));
+        $this->settings->set('brand_logo_path', $logo ?: asset_url('/assets/aos-logo.svg'));
         $this->audit->log($this->auth->user()['id'], 'settings_update', ['company' => $company, 'logo' => $logo]);
         $this->flash->add('success', 'Configuración guardada');
         header('Location: ' . route_to('admin'));
