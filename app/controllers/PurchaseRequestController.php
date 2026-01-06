@@ -175,6 +175,13 @@ class PurchaseRequestController
 
         $items = $pr['items'];
         $supplierId = (int)$_POST['supplier_id'];
+        $selectionNotes = trim($_POST['selection_notes'] ?? '');
+        if ($supplierId <= 0 || $selectionNotes === '') {
+            $this->flash->add('danger', 'Selecciona proveedor y agrega la justificación.');
+            header('Location: ' . route_to('quotations', ['id' => $prId]));
+            return;
+        }
+        $this->repo->selectSupplier($prId, $supplierId, $selectionNotes);
         $poData = [
             'supplier_id' => $supplierId,
             'total_amount' => array_sum(array_map(fn($i) => $i['quantity'] * $i['unit_price'], $items)),
@@ -188,6 +195,25 @@ class PurchaseRequestController
         $this->audit->log($this->auth->user()['id'], 'po_create', ['po_id' => $poId, 'pr_id' => $prId]);
         $this->flash->add('success', 'Orden de compra generada');
         header('Location: ' . route_to('purchase_orders', ['id' => $poId]));
+    }
+
+    public function selectSupplier(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['compras', 'administrador']);
+        $prId = (int)($_POST['pr_id'] ?? 0);
+        $pr = $this->repo->find($prId);
+        $supplierId = (int)($_POST['supplier_id'] ?? 0);
+        $notes = trim($_POST['selection_notes'] ?? '');
+        if (!$pr || $pr['status'] !== 'APROBADA' || $supplierId === 0 || $notes === '') {
+            $this->flash->add('danger', 'Solo puedes seleccionar proveedor de una PR aprobada con justificación.');
+            header('Location: ' . route_to('quotations', ['id' => $prId]));
+            return;
+        }
+        $this->repo->selectSupplier($prId, $supplierId, $notes);
+        $this->audit->log($this->auth->user()['id'], 'pr_select_supplier', ['pr_id' => $prId, 'supplier_id' => $supplierId]);
+        $this->flash->add('success', 'Proveedor seleccionado');
+        header('Location: ' . route_to('quotations', ['id' => $prId]));
     }
 
     private function validateRequest(): array

@@ -24,7 +24,7 @@ class AdminController
         $primary = trim($_POST['brand_primary_color'] ?? '');
         $accent = trim($_POST['brand_accent_color'] ?? '');
         $this->settings->set('company_name', $company ?: 'AOS');
-        $this->settings->set('brand_logo_path', $logo ?: asset_url('/assets/aos-logo.svg'));
+        $this->settings->set('brand_logo_path', $logo ?: 'assets/aos-logo.svg');
         $this->settings->set('brand_primary_color', $primary ?: '#0d6efd');
         $this->settings->set('brand_accent_color', $accent ?: '#198754');
         $this->audit->log($this->auth->user()['id'], 'settings_update', ['company' => $company, 'logo' => $logo, 'primary' => $primary, 'accent' => $accent]);
