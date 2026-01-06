@@ -5,6 +5,12 @@ class PurchaseOrderRepository
     {
     }
 
+    public function all(): array
+    {
+        $stmt = $this->db->pdo()->query('SELECT po.*, s.name as supplier_name, pr.title as pr_title FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id LEFT JOIN purchase_requests pr ON pr.id = po.purchase_request_id ORDER BY po.created_at DESC');
+        return $stmt->fetchAll();
+    }
+
     public function forPr(int $prId): array
     {
         $stmt = $this->db->pdo()->prepare('SELECT * FROM purchase_orders WHERE purchase_request_id = ?');
@@ -25,7 +31,7 @@ class PurchaseOrderRepository
 
     private function addItem(int $poId, array $item): void
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO po_items (purchase_order_id, description, quantity, unit_price) VALUES (?, ?, ?, ?)');
+        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_order_items (purchase_order_id, description, quantity, unit_price) VALUES (?, ?, ?, ?)');
         $stmt->execute([$poId, $item['description'], (float)$item['quantity'], (float)$item['unit_price']]);
     }
 
@@ -44,18 +50,18 @@ class PurchaseOrderRepository
 
     public function markSent(int $poId): void
     {
-        $stmt = $this->db->pdo()->prepare('UPDATE purchase_orders SET status = "ENVIADA A PROVEEDOR", sent_at = NOW(), updated_at = NOW() WHERE id = ?');
+        $stmt = $this->db->pdo()->prepare('UPDATE purchase_orders SET status = "ENVIADA_A_PROVEEDOR", sent_at = NOW(), updated_at = NOW() WHERE id = ?');
         $stmt->execute([$poId]);
     }
 
-    public function refreshStatusFromReceipts(int $poId): void
+    public function refreshStatusFromReceipts(int $poId): ?string
     {
         $currentStatus = $this->db->pdo()->prepare('SELECT status FROM purchase_orders WHERE id = ?');
         $currentStatus->execute([$poId]);
         $statusRow = $currentStatus->fetch();
         $baseStatus = $statusRow['status'] ?? 'CREADA';
 
-        $itemsStmt = $this->db->pdo()->prepare('SELECT id, quantity FROM po_items WHERE purchase_order_id = ?');
+        $itemsStmt = $this->db->pdo()->prepare('SELECT id, quantity FROM purchase_order_items WHERE purchase_order_id = ?');
         $itemsStmt->execute([$poId]);
         $items = $itemsStmt->fetchAll();
 
@@ -80,12 +86,16 @@ class PurchaseOrderRepository
 
         $newStatus = $baseStatus;
         if ($fullyReceived && !empty($items)) {
-            $newStatus = 'RECIBIDA TOTAL';
+            $newStatus = 'RECIBIDA_TOTAL';
         } elseif ($anyReceived) {
-            $newStatus = 'RECIBIDA PARCIAL';
+            $newStatus = 'RECIBIDA_PARCIAL';
         }
 
-        $stmt = $this->db->pdo()->prepare('UPDATE purchase_orders SET status = ?, updated_at = NOW() WHERE id = ?');
-        $stmt->execute([$newStatus, $poId]);
+        if ($newStatus !== $baseStatus) {
+            $stmt = $this->db->pdo()->prepare('UPDATE purchase_orders SET status = ?, updated_at = NOW() WHERE id = ?');
+            $stmt->execute([$newStatus, $poId]);
+            return $newStatus;
+        }
+        return null;
     }
 }

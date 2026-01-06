@@ -1,6 +1,7 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
+<?php $statusLabel = str_replace('_', ' ', $po['status']); ?>
 <h2>OC #<?= $po['id'] ?> - <?= htmlspecialchars($po['supplier_name']) ?></h2>
-<p>PR relacionada: <?= htmlspecialchars($po['pr_title']) ?> | Estado: <?= $po['status'] ?></p>
+<p>PR relacionada: <?= htmlspecialchars($po['pr_title']) ?> | Estado: <?= htmlspecialchars($statusLabel) ?></p>
 <?php if ($po['status'] === 'CREADA'): ?>
     <form method="post" action="<?= htmlspecialchars(route_to('po_send')) ?>" class="mb-3">
         <input type="hidden" name="po_id" value="<?= $po['id'] ?>">

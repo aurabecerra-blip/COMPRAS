@@ -13,11 +13,21 @@ class PurchaseOrderController
     ) {
     }
 
-    public function show(): void
+    public function index(): void
     {
         $this->authMiddleware->check();
         $this->auth->requireRole(['compras', 'recepcion', 'administrador']);
         $id = (int)($_GET['id'] ?? 0);
+        if ($id > 0) {
+            $this->show($id);
+            return;
+        }
+        $orders = $this->repo->all();
+        include __DIR__ . '/../views/purchase_orders/index.php';
+    }
+
+    private function show(int $id): void
+    {
         $po = $this->fetchPo($id);
         if (!$po) {
             http_response_code(404);
@@ -36,7 +46,7 @@ class PurchaseOrderController
         if (!$po) {
             return null;
         }
-        $itemsStmt = $this->db->pdo()->prepare('SELECT * FROM po_items WHERE purchase_order_id = ?');
+        $itemsStmt = $this->db->pdo()->prepare('SELECT * FROM purchase_order_items WHERE purchase_order_id = ?');
         $itemsStmt->execute([$id]);
         $po['items'] = $itemsStmt->fetchAll();
         return $po;
@@ -56,7 +66,10 @@ class PurchaseOrderController
             return;
         }
         $this->receptionRepo->create($poId, $filtered, $this->auth->user()['id'], $evidencePath, trim($_POST['notes'] ?? ''));
-        $this->repo->refreshStatusFromReceipts($poId);
+        $newStatus = $this->repo->refreshStatusFromReceipts($poId);
+        if ($newStatus) {
+            $this->audit->log($this->auth->user()['id'], 'po_status_change', ['po_id' => $poId, 'status' => $newStatus]);
+        }
         $this->audit->log($this->auth->user()['id'], 'po_receive', ['po_id' => $poId, 'items' => $filtered]);
         $this->flash->add('success', 'Recepción registrada');
         header('Location: ' . route_to('purchase_orders', ['id' => $poId]));
@@ -75,7 +88,7 @@ class PurchaseOrderController
             return;
         }
         $status = $po['status'];
-        $canClose = $status === 'RECIBIDA TOTAL' || ($status === 'RECIBIDA PARCIAL' && $reason !== '');
+        $canClose = $status === 'RECIBIDA_TOTAL' || ($status === 'RECIBIDA_PARCIAL' && $reason !== '');
         if ($canClose) {
             $this->repo->close($poId, $reason ?: null);
             $this->audit->log($this->auth->user()['id'], 'po_close', ['po_id' => $poId, 'reason' => $reason]);

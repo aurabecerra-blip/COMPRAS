@@ -1,7 +1,7 @@
 <?php
 $settingsRepo = $settingsRepo ?? ($GLOBALS['settingsRepo'] ?? null);
 $brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
-$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', asset_url('/assets/aos-logo.svg')) : asset_url('/assets/aos-logo.svg');
+$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', 'assets/aos-logo.svg') : 'assets/aos-logo.svg';
 $brandLogo = str_starts_with($brandLogoSetting, 'http') ? $brandLogoSetting : asset_url($brandLogoSetting);
 $brandPrimary = $settingsRepo ? $settingsRepo->get('brand_primary_color', '#0d6efd') : '#0d6efd';
 $brandAccent = $settingsRepo ? $settingsRepo->get('brand_accent_color', '#198754') : '#198754';
@@ -41,7 +41,7 @@ $brandAccent = $settingsRepo ? $settingsRepo->get('brand_accent_color', '#198754
                     <?php foreach (($flash->getAll()) as $msg): ?>
                         <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>"><?= htmlspecialchars($msg['message']) ?></div>
                     <?php endforeach; ?>
-                    <form method="post" action="<?= htmlspecialchars(route_to('login_submit')) ?>">
+                    <form method="post" action="<?= htmlspecialchars(route_to('do_login')) ?>">
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" name="email" class="form-control" required>

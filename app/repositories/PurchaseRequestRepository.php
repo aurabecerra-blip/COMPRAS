@@ -39,7 +39,7 @@ class PurchaseRequestRepository
     {
         $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, description = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
         $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description'], $id]);
-        $this->db->pdo()->prepare('DELETE FROM pr_items WHERE purchase_request_id = ?')->execute([$id]);
+        $this->db->pdo()->prepare('DELETE FROM purchase_request_items WHERE purchase_request_id = ?')->execute([$id]);
         foreach ($data['items'] as $item) {
             $this->addItem($id, $item);
         }
@@ -47,13 +47,13 @@ class PurchaseRequestRepository
 
     private function addItem(int $prId, array $item): void
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO pr_items (purchase_request_id, description, quantity, unit_price) VALUES (?, ?, ?, ?)');
+        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_request_items (purchase_request_id, description, quantity, unit_price) VALUES (?, ?, ?, ?)');
         $stmt->execute([$prId, $item['description'], (float)$item['quantity'], (float)$item['unit_price']]);
     }
 
     public function items(int $prId): array
     {
-        $stmt = $this->db->pdo()->prepare('SELECT * FROM pr_items WHERE purchase_request_id = ?');
+        $stmt = $this->db->pdo()->prepare('SELECT * FROM purchase_request_items WHERE purchase_request_id = ?');
         $stmt->execute([$prId]);
         return $stmt->fetchAll();
     }
@@ -71,6 +71,12 @@ class PurchaseRequestRepository
     {
         $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET status = "RECHAZADA", rejection_reason = ?, updated_at = NOW() WHERE id = ?');
         $stmt->execute([$reason, $id]);
+    }
+
+    public function selectSupplier(int $id, int $supplierId, string $notes): void
+    {
+        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET selected_supplier_id = ?, selection_notes = ?, updated_at = NOW() WHERE id = ?');
+        $stmt->execute([$supplierId, $notes, $id]);
     }
 
     public function canSend(array $pr): bool

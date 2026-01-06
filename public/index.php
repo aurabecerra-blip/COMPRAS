@@ -47,14 +47,12 @@ if ($page === 'login') {
     $authController->login();
     exit;
 }
-if ($page === 'login_submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($page === 'do_login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $authController->handleLogin();
     exit;
 }
 if ($page === 'logout') {
-    $auth->logout();
-    header('Location: ' . route_to('login'));
-    exit;
+    $authController->logout();
 }
 
 $authMiddleware->check();
@@ -87,6 +85,9 @@ switch ($page) {
     case 'purchase_request_reject':
         $prController->reject();
         break;
+    case 'purchase_request_select_supplier':
+        $prController->selectSupplier();
+        break;
     case 'quotations':
         $prController->quotations();
         break;
@@ -97,7 +98,7 @@ switch ($page) {
         $prController->createPo();
         break;
     case 'purchase_orders':
-        $poController->show();
+        $poController->index();
         break;
     case 'po_send':
         $poController->sendToSupplier();
