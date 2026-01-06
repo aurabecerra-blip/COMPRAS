@@ -24,6 +24,7 @@ CREATE TABLE suppliers (
 CREATE TABLE purchase_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
     requester_id INT NOT NULL,
+    tracking_code VARCHAR(30) NOT NULL UNIQUE,
     title VARCHAR(200) NOT NULL,
     justification TEXT NOT NULL,
     area VARCHAR(150) NOT NULL,
@@ -130,4 +131,7 @@ INSERT INTO settings (`key`, value) VALUES
 ('company_name', 'AOS'),
 ('brand_logo_path', 'assets/aos-logo.svg'),
 ('brand_primary_color', '#0d6efd'),
-('brand_accent_color', '#198754');
+('brand_accent_color', '#198754'),
+('form_areas', 'Operaciones,Finanzas,TI,Calidad'),
+('form_cost_centers', 'CC-001,CC-002,CC-003'),
+('notification_recipients', '');
