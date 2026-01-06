@@ -38,7 +38,7 @@ class Auth
     {
         $user = $this->user();
         if (!$user || !in_array($user['role'], $roles, true)) {
-            header('Location: /index.php?page=login');
+            header('Location: ' . route_to('login'));
             exit;
         }
     }

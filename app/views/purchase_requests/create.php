@@ -1,6 +1,6 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 <h2>Nueva Solicitud de Compra</h2>
-<form method="post" action="/index.php?page=purchase_request_store" enctype="multipart/form-data">
+<form method="post" action="<?= htmlspecialchars(route_to('purchase_request_store')) ?>" enctype="multipart/form-data">
     <div class="mb-3">
         <label class="form-label">Título</label>
         <input type="text" name="title" class="form-control" required>

@@ -3,14 +3,14 @@
 <div class="row">
     <div class="col-md-6">
         <h4>Configuración de marca</h4>
-        <form method="post" action="/index.php?page=admin_settings">
+        <form method="post" action="<?= htmlspecialchars(route_to('admin_settings')) ?>">
             <div class="mb-2">
                 <label class="form-label">Nombre de compañía</label>
                 <input type="text" name="company_name" class="form-control" value="<?= htmlspecialchars($settingsRepo->get('company_name', 'AOS')) ?>">
             </div>
             <div class="mb-2">
                 <label class="form-label">Ruta logo</label>
-                <input type="text" name="brand_logo_path" class="form-control" value="<?= htmlspecialchars($settingsRepo->get('brand_logo_path', '/public/assets/aos-logo.svg')) ?>">
+                <input type="text" name="brand_logo_path" class="form-control" value="<?= htmlspecialchars($settingsRepo->get('brand_logo_path', asset_url('/public/assets/aos-logo.svg'))) ?>">
             </div>
             <button class="btn btn-primary">Guardar</button>
         </form>
@@ -25,7 +25,7 @@
             <?php endforeach; ?>
             </tbody>
         </table>
-        <form method="post" action="/index.php?page=admin_user_store">
+        <form method="post" action="<?= htmlspecialchars(route_to('admin_user_store')) ?>">
             <div class="row g-2 mb-2">
                 <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Nombre"></div>
                 <div class="col-md-4"><input type="email" name="email" class="form-control" placeholder="Email"></div>

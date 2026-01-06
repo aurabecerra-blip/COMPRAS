@@ -4,7 +4,8 @@ $auth = $auth ?? ($GLOBALS['auth'] ?? null);
 $flash = $flash ?? ($GLOBALS['flash'] ?? null);
 
 $brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
-$brandLogo = $settingsRepo ? $settingsRepo->get('brand_logo_path', '/public/assets/aos-logo.svg') : '/public/assets/aos-logo.svg';
+$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', asset_url('/public/assets/aos-logo.svg')) : asset_url('/public/assets/aos-logo.svg');
+$brandLogo = str_starts_with($brandLogoSetting, 'http') ? $brandLogoSetting : asset_url($brandLogoSetting);
 $authUser = $auth ? $auth->user() : null;
 $flashMessages = $flash ? $flash->getAll() : [];
 ?>
@@ -20,7 +21,7 @@ $flashMessages = $flash ? $flash->getAll() : [];
 <?php $role = $authUser['role'] ?? ''; ?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/index.php">
+        <a class="navbar-brand" href="<?= htmlspecialchars(route_to('dashboard')) ?>">
             <img src="<?= htmlspecialchars($brandLogo) ?>" alt="AOS" style="height:32px" class="me-2 align-text-top">
             <?= htmlspecialchars($brandName) ?>
         </a>
@@ -29,22 +30,22 @@ $flashMessages = $flash ? $flash->getAll() : [];
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="/index.php">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('dashboard')) ?>">Dashboard</a></li>
                 <?php if (in_array($role, ['requester','approver','buyer','receiver','accountant','admin'], true)): ?>
-                    <li class="nav-item"><a class="nav-link" href="/index.php?page=purchase_requests">Solicitudes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('purchase_requests')) ?>">Solicitudes</a></li>
                 <?php endif; ?>
                 <?php if (in_array($role, ['buyer','admin'], true)): ?>
-                    <li class="nav-item"><a class="nav-link" href="/index.php?page=suppliers">Proveedores</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('suppliers')) ?>">Proveedores</a></li>
                 <?php endif; ?>
                 <?php if (in_array($role, ['admin','accountant'], true)): ?>
-                    <li class="nav-item"><a class="nav-link" href="/index.php?page=audit">Auditoría</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('audit')) ?>">Auditoría</a></li>
                 <?php endif; ?>
                 <?php if ($role === 'admin'): ?>
-                    <li class="nav-item"><a class="nav-link" href="/index.php?page=admin">Administración</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= htmlspecialchars(route_to('admin')) ?>">Administración</a></li>
                 <?php endif; ?>
             </ul>
             <span class="navbar-text me-3"><?= htmlspecialchars($authUser['email'] ?? '') ?> (<?= htmlspecialchars($authUser['role'] ?? '') ?>)</span>
-            <a href="/index.php?page=logout" class="btn btn-outline-light">Salir</a>
+            <a href="<?= htmlspecialchars(route_to('logout')) ?>" class="btn btn-outline-light">Salir</a>
         </div>
     </div>
 </nav>

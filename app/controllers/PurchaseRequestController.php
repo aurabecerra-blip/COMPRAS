@@ -10,12 +10,14 @@ class PurchaseRequestController
         private AuditLogger $audit,
         private Auth $auth,
         private Flash $flash,
-        private SettingsRepository $settings
+        private SettingsRepository $settings,
+        private AuthMiddleware $authMiddleware
     ) {
     }
 
     public function index(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['requester', 'approver', 'buyer', 'admin']);
         $requests = $this->repo->all();
         include __DIR__ . '/../views/purchase_requests/index.php';
@@ -23,6 +25,7 @@ class PurchaseRequestController
 
     public function create(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['requester', 'admin']);
         $suppliers = $this->supplierRepo->all();
         include __DIR__ . '/../views/purchase_requests/create.php';
@@ -30,17 +33,19 @@ class PurchaseRequestController
 
     public function store(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['requester', 'admin']);
         $data = $this->validateRequest();
         $prId = $this->repo->create($this->auth->user()['id'], $data);
         $this->audit->log($this->auth->user()['id'], 'pr_create', ['pr_id' => $prId]);
         $this->handleUpload($prId);
         $this->flash->add('success', 'Solicitud creada');
-        header('Location: /index.php?page=purchase_requests');
+        header('Location: ' . route_to('purchase_requests'));
     }
 
     public function edit(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['requester', 'admin']);
         $id = (int)($_GET['id'] ?? 0);
         $pr = $this->repo->find($id);
@@ -54,12 +59,13 @@ class PurchaseRequestController
 
     public function update(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['requester', 'admin']);
         $id = (int)($_POST['id'] ?? 0);
         $pr = $this->repo->find($id);
         if (!$pr || $pr['status'] !== 'BORRADOR') {
             $this->flash->add('danger', 'Solo se pueden editar borradores');
-            header('Location: /index.php?page=purchase_requests');
+            header('Location: ' . route_to('purchase_requests'));
             return;
         }
         $data = $this->validateRequest();
@@ -67,11 +73,12 @@ class PurchaseRequestController
         $this->handleUpload($id);
         $this->audit->log($this->auth->user()['id'], 'pr_update', ['pr_id' => $id]);
         $this->flash->add('success', 'Solicitud actualizada');
-        header('Location: /index.php?page=purchase_requests');
+        header('Location: ' . route_to('purchase_requests'));
     }
 
     public function send(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['requester', 'admin']);
         $id = (int)($_POST['id'] ?? 0);
         $pr = $this->repo->find($id);
@@ -80,11 +87,12 @@ class PurchaseRequestController
             $this->audit->log($this->auth->user()['id'], 'pr_send', ['pr_id' => $id]);
             $this->flash->add('success', 'Solicitud enviada');
         }
-        header('Location: /index.php?page=purchase_requests');
+        header('Location: ' . route_to('purchase_requests'));
     }
 
     public function approve(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['approver', 'admin']);
         $id = (int)($_POST['id'] ?? 0);
         $pr = $this->repo->find($id);
@@ -93,11 +101,12 @@ class PurchaseRequestController
             $this->audit->log($this->auth->user()['id'], 'pr_approve', ['pr_id' => $id]);
             $this->flash->add('success', 'Solicitud aprobada');
         }
-        header('Location: /index.php?page=purchase_requests');
+        header('Location: ' . route_to('purchase_requests'));
     }
 
     public function reject(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['approver', 'admin']);
         $id = (int)($_POST['id'] ?? 0);
         $pr = $this->repo->find($id);
@@ -106,11 +115,12 @@ class PurchaseRequestController
             $this->audit->log($this->auth->user()['id'], 'pr_reject', ['pr_id' => $id]);
             $this->flash->add('danger', 'Solicitud rechazada');
         }
-        header('Location: /index.php?page=purchase_requests');
+        header('Location: ' . route_to('purchase_requests'));
     }
 
     public function startApproval(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['approver', 'admin']);
         $id = (int)($_POST['id'] ?? 0);
         $pr = $this->repo->find($id);
@@ -119,11 +129,12 @@ class PurchaseRequestController
             $this->audit->log($this->auth->user()['id'], 'pr_in_review', ['pr_id' => $id]);
             $this->flash->add('info', 'Solicitud en aprobación');
         }
-        header('Location: /index.php?page=purchase_requests');
+        header('Location: ' . route_to('purchase_requests'));
     }
 
     public function quotations(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['buyer', 'admin']);
         $prId = (int)($_GET['id'] ?? 0);
         $pr = $this->repo->find($prId);
@@ -134,6 +145,7 @@ class PurchaseRequestController
 
     public function addQuotation(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['buyer', 'admin']);
         $prId = (int)($_POST['pr_id'] ?? 0);
         $data = [
@@ -144,17 +156,18 @@ class PurchaseRequestController
         $this->quotationRepo->create($prId, $data);
         $this->audit->log($this->auth->user()['id'], 'quotation_create', ['pr_id' => $prId]);
         $this->flash->add('success', 'Cotización registrada');
-        header('Location: /index.php?page=quotations&id=' . $prId);
+        header('Location: ' . route_to('quotations', ['id' => $prId]));
     }
 
     public function createPo(): void
     {
+        $this->authMiddleware->check();
         $this->auth->requireRole(['buyer', 'admin']);
         $prId = (int)($_POST['pr_id'] ?? 0);
         $pr = $this->repo->find($prId);
         if (!$pr || $pr['status'] !== 'APROBADA') {
             $this->flash->add('danger', 'La PR debe estar aprobada para generar la OC');
-            header('Location: /index.php?page=quotations&id=' . $prId);
+            header('Location: ' . route_to('quotations', ['id' => $prId]));
             return;
         }
 
@@ -172,7 +185,7 @@ class PurchaseRequestController
         $poId = $this->poRepo->create($prId, $poData);
         $this->audit->log($this->auth->user()['id'], 'po_create', ['po_id' => $poId, 'pr_id' => $prId]);
         $this->flash->add('success', 'Orden de compra generada');
-        header('Location: /index.php?page=purchase_orders&id=' . $poId);
+        header('Location: ' . route_to('purchase_orders', ['id' => $poId]));
     }
 
     private function validateRequest(): array
@@ -193,7 +206,8 @@ class PurchaseRequestController
 
         if ($title === '' || empty($cleanItems)) {
             $this->flash->add('danger', 'Título e ítems son obligatorios');
-            header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? '/index.php?page=purchase_requests'));
+            $fallback = $_SERVER['HTTP_REFERER'] ?? route_to('purchase_requests');
+            header('Location: ' . $fallback);
             exit;
         }
         return compact('title', 'description') + ['items' => $cleanItems];
@@ -218,7 +232,8 @@ class PurchaseRequestController
         $destName = uniqid('att_') . '_' . basename($file['name']);
         $dest = $uploadDir . '/' . $destName;
         if (move_uploaded_file($file['tmp_name'], $dest)) {
-            $this->attachmentRepo->add($prId, '/public/uploads/' . $destName, $file['name'], $this->auth->user()['id']);
+            $publicPath = asset_url('/public/uploads/' . $destName);
+            $this->attachmentRepo->add($prId, $publicPath, $file['name'], $this->auth->user()['id']);
             $this->audit->log($this->auth->user()['id'], 'attachment_upload', ['pr_id' => $prId, 'file' => $destName]);
         }
     }

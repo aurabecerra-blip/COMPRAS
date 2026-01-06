@@ -17,10 +17,10 @@ class AuthController
         if ($this->auth->attempt($email, $password)) {
             $user = $this->auth->user();
             $this->audit->log($user['id'], 'login', ['email' => $email]);
-            header('Location: /index.php');
+            header('Location: ' . route_to('dashboard'));
             exit;
         }
-        header('Location: /index.php?page=login');
+        header('Location: ' . route_to('login'));
     }
 
     public function logout(): void
@@ -28,6 +28,6 @@ class AuthController
         $user = $this->auth->user();
         $this->audit->log($user['id'] ?? null, 'logout', []);
         $this->auth->logout();
-        header('Location: /index.php?page=login');
+        header('Location: ' . route_to('login'));
     }
 }
