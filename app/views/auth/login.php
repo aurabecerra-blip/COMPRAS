@@ -1,10 +1,12 @@
 <?php
 $settingsRepo = $settingsRepo ?? ($GLOBALS['settingsRepo'] ?? null);
+$flash = $flash ?? ($GLOBALS['flash'] ?? null);
 $brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
 $brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', 'assets/aos-logo.svg') : 'assets/aos-logo.svg';
 $brandLogo = str_starts_with($brandLogoSetting, 'http') ? $brandLogoSetting : asset_url($brandLogoSetting);
 $brandPrimary = $settingsRepo ? $settingsRepo->get('brand_primary_color', '#0d6efd') : '#0d6efd';
 $brandAccent = $settingsRepo ? $settingsRepo->get('brand_accent_color', '#198754') : '#198754';
+$flashMessages = $flash ? $flash->getAll() : [];
 ?>
 <!doctype html>
 <html lang="es">
@@ -38,7 +40,7 @@ $brandAccent = $settingsRepo ? $settingsRepo->get('brand_accent_color', '#198754
                         <h5 class="mt-2 text-primary"><?= htmlspecialchars($brandName) ?></h5>
                         <p class="mb-0 text-muted">Control de compras</p>
                     </div>
-                    <?php foreach (($flash->getAll()) as $msg): ?>
+                    <?php foreach ($flashMessages as $msg): ?>
                         <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>"><?= htmlspecialchars($msg['message']) ?></div>
                     <?php endforeach; ?>
                     <form method="post" action="<?= htmlspecialchars(route_to('do_login')) ?>">
