@@ -4,37 +4,33 @@ $role = $authUser['role'] ?? '';
 $generalCards = [
     ['title' => 'Solicitudes registradas', 'value' => $stats['prs'], 'subtitle' => 'Ciclo completo de compras', 'variant' => 'primary'],
     ['title' => 'Cotizaciones cargadas', 'value' => $stats['quotations'], 'subtitle' => 'Comparativas recibidas', 'variant' => 'info'],
-    ['title' => 'OC abiertas', 'value' => $stats['pos_open'], 'subtitle' => 'Pendientes de recepción o facturación', 'variant' => 'success'],
-    ['title' => 'Facturas registradas', 'value' => $stats['invoices'], 'subtitle' => 'Documentos contables en el sistema', 'variant' => 'warning'],
+    ['title' => 'OC abiertas', 'value' => $stats['pos_open'], 'subtitle' => 'Pendientes de recepción', 'variant' => 'success'],
+    ['title' => 'OC cerradas', 'value' => $stats['pos_closed'], 'subtitle' => 'Recepción total o justificada', 'variant' => 'secondary'],
 ];
 
 $roleCards = match ($role) {
-    'requester' => [
+    'solicitante' => [
         ['title' => 'Borradores en curso', 'value' => $stats['draft_prs'], 'subtitle' => 'PR listas para completar', 'variant' => 'secondary'],
-        ['title' => 'En revisión', 'value' => $stats['approval_prs'], 'subtitle' => 'Esperando aprobación', 'variant' => 'info'],
+        ['title' => 'Enviadas', 'value' => $stats['sent_prs'], 'subtitle' => 'Esperando aprobación', 'variant' => 'info'],
         ['title' => 'Rechazadas', 'value' => $stats['rejected_prs'], 'subtitle' => 'Requieren ajustes', 'variant' => 'danger'],
     ],
-    'approver' => [
-        ['title' => 'Pendientes de aprobar', 'value' => $stats['approval_prs'], 'subtitle' => 'PR en tu cola', 'variant' => 'primary'],
+    'aprobador' => [
+        ['title' => 'Pendientes de aprobar', 'value' => $stats['sent_prs'], 'subtitle' => 'PR en tu cola', 'variant' => 'primary'],
         ['title' => 'Aprobadas', 'value' => $stats['approved_prs'], 'subtitle' => 'Listas para compras', 'variant' => 'success'],
     ],
-    'buyer' => [
-        ['title' => 'PR aprobadas', 'value' => $stats['approved_prs'], 'subtitle' => 'Listas para negociar', 'variant' => 'primary'],
+    'compras' => [
+        ['title' => 'PR aprobadas', 'value' => $stats['approved_prs'], 'subtitle' => 'Listas para cotizar', 'variant' => 'primary'],
         ['title' => 'Cotizaciones', 'value' => $stats['quotations'], 'subtitle' => 'Ofertas cargadas', 'variant' => 'info'],
         ['title' => 'OC abiertas', 'value' => $stats['pos_open'], 'subtitle' => 'Seguimiento a proveedores', 'variant' => 'success'],
     ],
-    'receiver' => [
-        ['title' => 'OC abiertas', 'value' => $stats['pos_open'], 'subtitle' => 'Pendientes de recepción', 'variant' => 'primary'],
+    'recepcion' => [
+        ['title' => 'OC pendientes de recibir', 'value' => $stats['pos_open'], 'subtitle' => 'Esperan recepción', 'variant' => 'primary'],
         ['title' => 'Recepciones registradas', 'value' => $stats['receipts'], 'subtitle' => 'Movimientos de almacén', 'variant' => 'success'],
     ],
-    'accountant' => [
-        ['title' => 'Facturas registradas', 'value' => $stats['invoices'], 'subtitle' => 'Documentos listos para pago', 'variant' => 'warning'],
-        ['title' => 'OC cerradas', 'value' => $stats['pos_closed'], 'subtitle' => 'Conciliadas y terminadas', 'variant' => 'secondary'],
-    ],
-    'admin' => [
+    'administrador' => [
         ['title' => 'Usuarios activos', 'value' => $stats['users'], 'subtitle' => 'Control y roles asignados', 'variant' => 'primary'],
         ['title' => 'Proveedores cargados', 'value' => $stats['suppliers'], 'subtitle' => 'Catálogo de abastecimiento', 'variant' => 'success'],
-        ['title' => 'Órdenes totales', 'value' => $stats['pos'], 'subtitle' => 'Historico de compras', 'variant' => 'info'],
+        ['title' => 'Órdenes totales', 'value' => $stats['pos'], 'subtitle' => 'Histórico de compras', 'variant' => 'info'],
     ],
     default => [],
 };

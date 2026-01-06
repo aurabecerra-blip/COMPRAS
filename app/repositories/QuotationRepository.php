@@ -12,9 +12,9 @@ class QuotationRepository
         return $stmt->fetchAll();
     }
 
-    public function create(int $prId, array $data): void
+    public function create(int $prId, array $data, string $pdfPath): void
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO quotations (purchase_request_id, supplier_id, amount, notes, created_at) VALUES (?, ?, ?, ?, NOW())');
-        $stmt->execute([$prId, $data['supplier_id'], $data['amount'], $data['notes']]);
+        $stmt = $this->db->pdo()->prepare('INSERT INTO quotations (purchase_request_id, supplier_id, amount, lead_time_days, notes, pdf_path, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+        $stmt->execute([$prId, $data['supplier_id'], $data['amount'], $data['lead_time_days'], $data['notes'], $pdfPath]);
     }
 }

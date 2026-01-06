@@ -30,7 +30,6 @@ $poController = new PurchaseOrderController(
     new PurchaseOrderRepository($db),
     new PurchaseRequestRepository($db),
     new ReceptionRepository($db),
-    new InvoiceRepository($db),
     $audit,
     $auth,
     $flash,
@@ -88,9 +87,6 @@ switch ($page) {
     case 'purchase_request_reject':
         $prController->reject();
         break;
-    case 'purchase_request_start_approval':
-        $prController->startApproval();
-        break;
     case 'quotations':
         $prController->quotations();
         break;
@@ -103,11 +99,11 @@ switch ($page) {
     case 'purchase_orders':
         $poController->show();
         break;
+    case 'po_send':
+        $poController->sendToSupplier();
+        break;
     case 'po_receive':
         $poController->receive();
-        break;
-    case 'po_invoice':
-        $poController->addInvoice();
         break;
     case 'po_close':
         $poController->close();

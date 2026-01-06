@@ -23,19 +23,14 @@
                             <button class="btn btn-sm btn-warning" type="submit">Enviar</button>
                         </form>
                     <?php endif; ?>
-                    <?php if ($r['status'] === 'ENVIADA' && in_array($auth->user()['role'], ['approver','admin'], true)): ?>
-                        <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_start_approval')) ?>" class="d-inline">
-                            <input type="hidden" name="id" value="<?= $r['id'] ?>">
-                            <button class="btn btn-sm btn-info" type="submit">Tomar en aprobación</button>
-                        </form>
-                    <?php endif; ?>
-                    <?php if ($r['status'] === 'EN_APROBACION' && in_array($auth->user()['role'], ['approver','admin'], true)): ?>
+                    <?php if ($r['status'] === 'ENVIADA' && in_array($auth->user()['role'], ['aprobador','administrador'], true)): ?>
                         <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_approve')) ?>" class="d-inline">
                             <input type="hidden" name="id" value="<?= $r['id'] ?>">
                             <button class="btn btn-sm btn-success" type="submit">Aprobar</button>
                         </form>
-                        <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_reject')) ?>" class="d-inline">
+                        <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_reject')) ?>" class="d-inline d-flex align-items-center gap-1">
                             <input type="hidden" name="id" value="<?= $r['id'] ?>">
+                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="Motivo" required>
                             <button class="btn btn-sm btn-danger" type="submit">Rechazar</button>
                         </form>
                     <?php endif; ?>

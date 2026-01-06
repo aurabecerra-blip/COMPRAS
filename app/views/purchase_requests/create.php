@@ -6,6 +6,20 @@
         <input type="text" name="title" class="form-control" required>
     </div>
     <div class="mb-3">
+        <label class="form-label">Justificación</label>
+        <textarea name="justification" class="form-control" rows="2" required></textarea>
+    </div>
+    <div class="row g-2 mb-3">
+        <div class="col-md-6">
+            <label class="form-label">Área</label>
+            <input type="text" name="area" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Centro de costo</label>
+            <input type="text" name="cost_center" class="form-control" required>
+        </div>
+    </div>
+    <div class="mb-3">
         <label class="form-label">Descripción</label>
         <textarea name="description" class="form-control" rows="3"></textarea>
     </div>
