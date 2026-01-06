@@ -1,7 +1,12 @@
 <?php
 $settingsRepo = $settingsRepo ?? ($GLOBALS['settingsRepo'] ?? null);
+$auth = $auth ?? ($GLOBALS['auth'] ?? null);
+$flash = $flash ?? ($GLOBALS['flash'] ?? null);
+
 $brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
 $brandLogo = $settingsRepo ? $settingsRepo->get('brand_logo_path', '/public/assets/aos-logo.svg') : '/public/assets/aos-logo.svg';
+$authUser = $auth ? $auth->user() : null;
+$flashMessages = $flash ? $flash->getAll() : [];
 ?>
 <!doctype html>
 <html lang="es">
@@ -12,7 +17,7 @@ $brandLogo = $settingsRepo ? $settingsRepo->get('brand_logo_path', '/public/asse
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<?php $role = $auth->user()['role'] ?? ''; ?>
+<?php $role = $authUser['role'] ?? ''; ?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="/index.php">
@@ -38,12 +43,12 @@ $brandLogo = $settingsRepo ? $settingsRepo->get('brand_logo_path', '/public/asse
                     <li class="nav-item"><a class="nav-link" href="/index.php?page=admin">Administración</a></li>
                 <?php endif; ?>
             </ul>
-            <span class="navbar-text me-3"><?= htmlspecialchars($auth->user()['email'] ?? '') ?> (<?= htmlspecialchars($auth->user()['role'] ?? '') ?>)</span>
+            <span class="navbar-text me-3"><?= htmlspecialchars($authUser['email'] ?? '') ?> (<?= htmlspecialchars($authUser['role'] ?? '') ?>)</span>
             <a href="/index.php?page=logout" class="btn btn-outline-light">Salir</a>
         </div>
     </div>
 </nav>
 <div class="container">
-    <?php foreach (($flash->getAll()) as $msg): ?>
+    <?php foreach ($flashMessages as $msg): ?>
         <div class="alert alert-<?= htmlspecialchars($msg['type']) ?>"><?= htmlspecialchars($msg['message']) ?></div>
     <?php endforeach; ?>
