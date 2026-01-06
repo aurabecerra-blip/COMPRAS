@@ -10,7 +10,7 @@
             </div>
             <div class="mb-2">
                 <label class="form-label">Ruta logo</label>
-                <input type="text" name="brand_logo_path" class="form-control" value="<?= htmlspecialchars($settingsRepo->get('brand_logo_path', asset_url('/public/assets/aos-logo.svg'))) ?>">
+                <input type="text" name="brand_logo_path" class="form-control" value="<?= htmlspecialchars($settingsRepo->get('brand_logo_path', asset_url('/assets/aos-logo.svg'))) ?>">
             </div>
             <button class="btn btn-primary">Guardar</button>
         </form>

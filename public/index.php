@@ -1,4 +1,10 @@
 <?php
+if (!defined('BASE_URL')) {
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '/');
+    $normalizedBase = rtrim($scriptDir, '/');
+    define('BASE_URL', $normalizedBase === '' ? '/' : $normalizedBase);
+}
+
 require __DIR__ . '/../app/bootstrap.php';
 
 $page = $_GET['page'] ?? ($auth->user() ? 'dashboard' : 'login');

@@ -4,7 +4,9 @@ session_start();
 $config = require __DIR__ . '/config/config.php';
 
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/compras');
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '/');
+    $normalizedBase = rtrim($scriptDir, '/');
+    define('BASE_URL', $normalizedBase === '' ? '/' : $normalizedBase);
 }
 
 if (!function_exists('base_url')) {

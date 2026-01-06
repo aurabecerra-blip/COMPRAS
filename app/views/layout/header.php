@@ -4,7 +4,7 @@ $auth = $auth ?? ($GLOBALS['auth'] ?? null);
 $flash = $flash ?? ($GLOBALS['flash'] ?? null);
 
 $brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
-$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', asset_url('/public/assets/aos-logo.svg')) : asset_url('/public/assets/aos-logo.svg');
+$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', asset_url('/assets/aos-logo.svg')) : asset_url('/assets/aos-logo.svg');
 $brandLogo = str_starts_with($brandLogoSetting, 'http') ? $brandLogoSetting : asset_url($brandLogoSetting);
 $authUser = $auth ? $auth->user() : null;
 $flashMessages = $flash ? $flash->getAll() : [];
