@@ -11,7 +11,7 @@ class PurchaseRequestController
         private Auth $auth,
         private Flash $flash,
         private SettingsRepository $settings,
-        private Mailer $mailer,
+        private NotificationService $notifications,
         private AuthMiddleware $authMiddleware
     ) {
     }
@@ -303,20 +303,9 @@ class PurchaseRequestController
         if (!$pr) {
             return;
         }
-        $recipientsSetting = $this->settings->get('notification_recipients', '');
-        $recipients = array_filter(array_map('trim', explode(',', $recipientsSetting ?: '')));
         $requesterEmail = $pr['requester_email'] ?? null;
-        if ($requesterEmail) {
-            $recipients[] = $requesterEmail;
-        }
         $actorEmail = $this->auth->user()['email'] ?? null;
-        if ($actorEmail) {
-            $recipients[] = $actorEmail;
-        }
-        $recipients = array_values(array_unique(array_filter($recipients)));
-        if (empty($recipients)) {
-            return;
-        }
+        $recipients = array_values(array_filter([$requesterEmail, $actorEmail]));
         $trackLink = route_to('track', ['code' => $pr['tracking_code']]);
         $body = '<p><strong>' . htmlspecialchars($title) . '</strong></p>';
         $body .= '<p>Código: <strong>' . htmlspecialchars($pr['tracking_code']) . '</strong></p>';
@@ -324,6 +313,12 @@ class PurchaseRequestController
         $body .= '<p>Estado: ' . htmlspecialchars($pr['status']) . '</p>';
         $body .= '<p><a href="' . htmlspecialchars($trackLink) . '">Ver seguimiento</a></p>';
         $subject = '[Compras] ' . $title . ' (' . ($pr['tracking_code'] ?? 'PR') . ')';
-        $this->mailer->send($recipients, $subject, $body);
+        $typeCode = match ($pr['status']) {
+            'ENVIADA' => 'purchase_request_sent',
+            'APROBADA' => 'purchase_request_approved',
+            'RECHAZADA' => 'purchase_request_rejected',
+            default => 'purchase_request_created',
+        };
+        $this->notifications->send($typeCode, $subject, $body, ['recipients' => $recipients]);
     }
 }

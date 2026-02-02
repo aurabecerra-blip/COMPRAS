@@ -10,7 +10,6 @@ require __DIR__ . '/../app/bootstrap.php';
 $page = $_GET['page'] ?? ($auth->user() ? 'dashboard' : 'login');
 
 $authMiddleware = new AuthMiddleware($auth, $flash);
-$mailer = new Mailer($config['mail']);
 $trackingController = new TrackingController(new PurchaseRequestRepository($db), $settingsRepo, $flash);
 
 $authController = new AuthController($auth, $flash, $audit);
@@ -25,7 +24,7 @@ $prController = new PurchaseRequestController(
     $auth,
     $flash,
     $settingsRepo,
-    $mailer,
+    $notificationService,
     $authMiddleware
 );
 $poController = new PurchaseOrderController(
@@ -39,7 +38,17 @@ $poController = new PurchaseOrderController(
     $authMiddleware
 );
 $supplierController = new SupplierController(new SupplierRepository($db), $flash, $audit, $auth, $authMiddleware);
-$adminController = new AdminController($settingsRepo, new UserRepository($db), $flash, $audit, $auth, $authMiddleware);
+$adminController = new AdminController(
+    $settingsRepo,
+    $userRepo,
+    $notificationTypes,
+    $notificationLogs,
+    $notificationService,
+    $flash,
+    $audit,
+    $auth,
+    $authMiddleware
+);
 $auditController = new AuditController($db, $auth, $authMiddleware);
 
 if ($page === 'login') {
@@ -134,6 +143,18 @@ switch ($page) {
         break;
     case 'admin_settings':
         $adminController->updateSettings();
+        break;
+    case 'admin_notifications':
+        $adminController->updateNotifications();
+        break;
+    case 'admin_notifications_test':
+        $adminController->sendTestNotification();
+        break;
+    case 'admin_notification_types':
+        $adminController->updateNotificationTypes();
+        break;
+    case 'admin_notification_type_create':
+        $adminController->createNotificationType();
         break;
     case 'admin_user_store':
         $adminController->storeUser();
