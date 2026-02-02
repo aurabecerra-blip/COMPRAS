@@ -55,7 +55,10 @@ $flash = new Flash();
 $auth = new Auth($db, $flash);
 $audit = new AuditLogger($db);
 $settingsRepo = new SettingsRepository($db);
-$mailer = new Mailer($config['mail']);
+$userRepo = new UserRepository($db);
+$notificationTypes = new NotificationTypeRepository($db);
+$notificationLogs = new NotificationLogRepository($db);
+$notificationService = new NotificationService($settingsRepo, $notificationTypes, $notificationLogs, $userRepo, new SmtpMailer());
 
 if (!function_exists('setting_list')) {
     function setting_list(SettingsRepository $repo, string $key, array $fallback = []): array

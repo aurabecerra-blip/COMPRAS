@@ -12,6 +12,33 @@ CREATE TABLE settings (
     value VARCHAR(255) NOT NULL
 );
 
+CREATE TABLE notification_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(100) NOT NULL UNIQUE,
+    name VARCHAR(150) NOT NULL,
+    description VARCHAR(255) NULL,
+    channel VARCHAR(50) NOT NULL DEFAULT 'email',
+    is_active TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE notification_type_roles (
+    notification_type_id INT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (notification_type_id, role),
+    FOREIGN KEY (notification_type_id) REFERENCES notification_types(id) ON DELETE CASCADE
+);
+
+CREATE TABLE notification_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    notification_type_id INT NOT NULL,
+    channel VARCHAR(50) NOT NULL,
+    recipient VARCHAR(150) NOT NULL,
+    status ENUM('enviado','error') NOT NULL,
+    error_message VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY (notification_type_id) REFERENCES notification_types(id)
+);
+
 CREATE TABLE suppliers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
@@ -134,4 +161,25 @@ INSERT INTO settings (`key`, value) VALUES
 ('brand_accent_color', '#198754'),
 ('form_areas', 'Operaciones,Finanzas,TI,Calidad'),
 ('form_cost_centers', 'CC-001,CC-002,CC-003'),
-('notification_recipients', '');
+('notifications_enabled', '0'),
+('notifications_email_enabled', '0'),
+('notifications_smtp_host', ''),
+('notifications_smtp_port', ''),
+('notifications_smtp_security', 'tls'),
+('notifications_smtp_user', ''),
+('notifications_smtp_password', ''),
+('notifications_from_email', ''),
+('notifications_from_name', ''),
+('notifications_test_email', '');
+
+INSERT INTO notification_types (code, name, description, channel, is_active) VALUES
+('purchase_request_created', 'Solicitud creada', 'Creación de una solicitud de compra', 'email', 1),
+('purchase_request_sent', 'Solicitud enviada', 'Envío de solicitud a aprobación', 'email', 1),
+('purchase_request_approved', 'Solicitud aprobada', 'Aprobación de una solicitud', 'email', 1),
+('purchase_request_rejected', 'Solicitud rechazada', 'Rechazo de una solicitud', 'email', 1),
+('test_email', 'Correo de prueba', 'Mensaje de prueba para SMTP', 'email', 1);
+
+INSERT INTO notification_type_roles (notification_type_id, role)
+SELECT id, 'aprobador' FROM notification_types WHERE code = 'purchase_request_sent';
+INSERT INTO notification_type_roles (notification_type_id, role)
+SELECT id, 'compras' FROM notification_types WHERE code IN ('purchase_request_approved', 'purchase_request_rejected');

@@ -20,4 +20,17 @@ class UserRepository
             password_hash($data['password'], PASSWORD_DEFAULT),
         ]);
     }
+
+    public function emailsByRoles(array $roles): array
+    {
+        $roles = array_values(array_unique(array_filter(array_map('trim', $roles))));
+        if (empty($roles)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($roles), '?'));
+        $stmt = $this->db->pdo()->prepare('SELECT email FROM users WHERE role IN (' . $placeholders . ')');
+        $stmt->execute($roles);
+        $emails = array_column($stmt->fetchAll(), 'email');
+        return array_values(array_unique(array_filter(array_map('trim', $emails))));
+    }
 }
