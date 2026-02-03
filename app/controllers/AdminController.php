@@ -95,8 +95,12 @@ class AdminController
             header('Location: ' . route_to('admin', ['tab' => 'notifications']));
             return;
         }
-        $this->notifications->sendTestEmail($recipient);
-        $this->flash->add('success', 'Correo de prueba enviado (revisa el log).');
+        $error = $this->notifications->sendTestEmail($recipient);
+        if ($error !== null) {
+            $this->flash->add('danger', 'Error al enviar correo de prueba: ' . $error);
+        } else {
+            $this->flash->add('success', 'Correo de prueba enviado (revisa el log).');
+        }
         header('Location: ' . route_to('admin', ['tab' => 'notifications']));
     }
 

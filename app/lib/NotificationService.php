@@ -37,38 +37,45 @@ class NotificationService
         $smtpConfig = $this->smtpConfig();
 
         foreach ($recipients as $recipient) {
-            $status = 'enviado';
-            $error = null;
-            try {
-                $this->mailer->send($recipient, $subject, $htmlBody, $smtpConfig);
-            } catch (Throwable $e) {
-                $status = 'error';
-                $error = $e->getMessage();
-            }
-            $this->logs->add([
-                'type_id' => $type['id'],
-                'channel' => $channel,
-                'recipient' => $recipient,
-                'status' => $status,
-                'error_message' => $error,
-            ]);
+            $this->sendToRecipient($type, $channel, $recipient, $subject, $htmlBody, $smtpConfig);
         }
     }
 
-    public function sendTestEmail(string $recipient): void
+    public function sendTestEmail(string $recipient): ?string
     {
-        if (!$this->isEnabled('notifications_enabled') || !$this->isEnabled('notifications_email_enabled')) {
-            return;
+        $type = $this->types->findByCode('test_email');
+        if (!$type) {
+            return 'No se encontró la configuración del correo de prueba.';
         }
 
-        $type = $this->types->findByCode('test_email');
-        if (!$type || !$type['is_active']) {
-            return;
+        if (!$this->isEnabled('notifications_enabled') || !$this->isEnabled('notifications_email_enabled')) {
+            $error = 'Las notificaciones por correo no están habilitadas.';
+            $this->logs->add([
+                'type_id' => $type['id'],
+                'channel' => 'email',
+                'recipient' => $recipient,
+                'status' => 'error',
+                'error_message' => $error,
+            ]);
+            return $error;
+        }
+
+        if (!$type['is_active']) {
+            $error = 'El tipo de notificación para correo de prueba está desactivado.';
+            $this->logs->add([
+                'type_id' => $type['id'],
+                'channel' => 'email',
+                'recipient' => $recipient,
+                'status' => 'error',
+                'error_message' => $error,
+            ]);
+            return $error;
         }
 
         $subject = 'Prueba de correo - Configuración de notificaciones';
         $body = '<p>Este es un correo de prueba desde el módulo de notificaciones.</p>';
-        $this->send('test_email', $subject, $body, ['recipients' => [$recipient]]);
+        $smtpConfig = $this->smtpConfig();
+        return $this->sendToRecipient($type, 'email', $recipient, $subject, $body, $smtpConfig);
     }
 
     private function isEnabled(string $key): bool
@@ -87,5 +94,27 @@ class NotificationService
             'from_email' => $this->settings->get('notifications_from_email', ''),
             'from_name' => $this->settings->get('notifications_from_name', ''),
         ];
+    }
+
+    private function sendToRecipient(array $type, string $channel, string $recipient, string $subject, string $htmlBody, array $smtpConfig): ?string
+    {
+        $status = 'enviado';
+        $error = null;
+        try {
+            $this->mailer->send($recipient, $subject, $htmlBody, $smtpConfig);
+        } catch (Throwable $e) {
+            $status = 'error';
+            $error = $e->getMessage();
+        }
+
+        $this->logs->add([
+            'type_id' => $type['id'],
+            'channel' => $channel,
+            'recipient' => $recipient,
+            'status' => $status,
+            'error_message' => $error,
+        ]);
+
+        return $error;
     }
 }
