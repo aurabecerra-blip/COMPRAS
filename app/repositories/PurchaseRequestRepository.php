@@ -30,7 +30,17 @@ class PurchaseRequestRepository
         $tracking = $this->generateTrackingCode();
         if ($this->supportsDescriptionColumn()) {
             $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
-            $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
+            try {
+                $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
+            } catch (PDOException $exception) {
+                if (!$this->isUnknownDescriptionColumn($exception)) {
+                    throw $exception;
+                }
+
+                $this->supportsDescription = false;
+                $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
+                $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center']]);
+            }
         } else {
             $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
             $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center']]);
@@ -46,7 +56,17 @@ class PurchaseRequestRepository
     {
         if ($this->supportsDescriptionColumn()) {
             $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, description = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
-            $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description'], $id]);
+            try {
+                $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description'], $id]);
+            } catch (PDOException $exception) {
+                if (!$this->isUnknownDescriptionColumn($exception)) {
+                    throw $exception;
+                }
+
+                $this->supportsDescription = false;
+                $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
+                $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $id]);
+            }
         } else {
             $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
             $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $id]);
@@ -128,5 +148,10 @@ class PurchaseRequestRepository
         $stmt = $this->db->pdo()->query("SHOW COLUMNS FROM purchase_requests LIKE 'description'");
         $this->supportsDescription = (bool)$stmt->fetch();
         return $this->supportsDescription;
+    }
+
+    private function isUnknownDescriptionColumn(PDOException $exception): bool
+    {
+        return str_contains($exception->getMessage(), "Unknown column 'description'");
     }
 }
