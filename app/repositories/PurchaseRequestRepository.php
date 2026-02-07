@@ -2,6 +2,7 @@
 class PurchaseRequestRepository
 {
     private const STATUSES = ['BORRADOR', 'ENVIADA', 'APROBADA', 'RECHAZADA', 'CANCELADA'];
+    private ?bool $supportsDescription = null;
 
     public function __construct(private Database $db)
     {
@@ -27,8 +28,13 @@ class PurchaseRequestRepository
     public function create(int $requesterId, array $data): int
     {
         $tracking = $this->generateTrackingCode();
-        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
-        $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
+        if ($this->supportsDescriptionColumn()) {
+            $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
+            $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
+        } else {
+            $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
+            $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center']]);
+        }
         $prId = (int)$this->db->pdo()->lastInsertId();
         foreach ($data['items'] as $item) {
             $this->addItem($prId, $item);
@@ -38,8 +44,13 @@ class PurchaseRequestRepository
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, description = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
-        $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description'], $id]);
+        if ($this->supportsDescriptionColumn()) {
+            $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, description = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
+            $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description'], $id]);
+        } else {
+            $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
+            $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $id]);
+        }
         $this->db->pdo()->prepare('DELETE FROM purchase_request_items WHERE purchase_request_id = ?')->execute([$id]);
         foreach ($data['items'] as $item) {
             $this->addItem($id, $item);
@@ -106,5 +117,16 @@ class PurchaseRequestRepository
             $exists = $stmt->fetch();
         } while ($exists);
         return $code;
+    }
+
+    private function supportsDescriptionColumn(): bool
+    {
+        if ($this->supportsDescription !== null) {
+            return $this->supportsDescription;
+        }
+
+        $stmt = $this->db->pdo()->query("SHOW COLUMNS FROM purchase_requests LIKE 'description'");
+        $this->supportsDescription = (bool)$stmt->fetch();
+        return $this->supportsDescription;
     }
 }
