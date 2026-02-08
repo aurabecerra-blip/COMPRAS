@@ -29,8 +29,8 @@ class PurchaseRequestRepository
     {
         $tracking = $this->generateTrackingCode();
         if ($this->supportsDescriptionColumn()) {
-            $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
             try {
+                $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
                 $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description']]);
             } catch (PDOException $exception) {
                 if (!$this->isUnknownDescriptionColumn($exception)) {
@@ -55,8 +55,8 @@ class PurchaseRequestRepository
     public function update(int $id, array $data): void
     {
         if ($this->supportsDescriptionColumn()) {
-            $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, description = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
             try {
+                $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, description = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
                 $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $data['description'], $id]);
             } catch (PDOException $exception) {
                 if (!$this->isUnknownDescriptionColumn($exception)) {
@@ -152,6 +152,13 @@ class PurchaseRequestRepository
 
     private function isUnknownDescriptionColumn(PDOException $exception): bool
     {
-        return str_contains($exception->getMessage(), "Unknown column 'description'");
+        $message = $exception->getMessage();
+        $sqlState = (string)($exception->errorInfo[0] ?? $exception->getCode());
+
+        return $sqlState === '42S22'
+            && (
+                str_contains($message, "Unknown column 'description'")
+                || str_contains($message, 'description')
+            );
     }
 }
