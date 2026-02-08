@@ -2,6 +2,7 @@
 class PurchaseRequestRepository
 {
     private const STATUSES = ['BORRADOR', 'ENVIADA', 'APROBADA', 'RECHAZADA', 'CANCELADA'];
+    private ?bool $hasRequestDescriptionColumn = null;
 
     public function __construct(private Database $db)
     {
@@ -20,6 +21,7 @@ class PurchaseRequestRepository
         if (!$pr) {
             return null;
         }
+        $pr['description'] = $pr['description'] ?? '';
         $pr['items'] = $this->items($id);
         return $pr;
     }
@@ -27,8 +29,13 @@ class PurchaseRequestRepository
     public function create(int $requesterId, array $data): int
     {
         $tracking = $this->generateTrackingCode();
-        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
-        $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center']]);
+        if ($this->hasRequestDescriptionColumn()) {
+            $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, description, justification, area, cost_center, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
+            $stmt->execute([$requesterId, $tracking, $data['title'], $data['description'] ?? '', $data['justification'], $data['area'], $data['cost_center']]);
+        } else {
+            $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_requests (requester_id, tracking_code, title, justification, area, cost_center, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, "BORRADOR", NOW(), NOW())');
+            $stmt->execute([$requesterId, $tracking, $data['title'], $data['justification'], $data['area'], $data['cost_center']]);
+        }
         $prId = (int)$this->db->pdo()->lastInsertId();
         foreach ($data['items'] as $item) {
             $this->addItem($prId, $item);
@@ -38,8 +45,13 @@ class PurchaseRequestRepository
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
-        $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $id]);
+        if ($this->hasRequestDescriptionColumn()) {
+            $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, description = ?, justification = ?, area = ?, cost_center = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
+            $stmt->execute([$data['title'], $data['description'] ?? '', $data['justification'], $data['area'], $data['cost_center'], $id]);
+        } else {
+            $stmt = $this->db->pdo()->prepare('UPDATE purchase_requests SET title = ?, justification = ?, area = ?, cost_center = ?, updated_at = NOW() WHERE id = ? AND status = "BORRADOR"');
+            $stmt->execute([$data['title'], $data['justification'], $data['area'], $data['cost_center'], $id]);
+        }
         $this->db->pdo()->prepare('DELETE FROM purchase_request_items WHERE purchase_request_id = ?')->execute([$id]);
         foreach ($data['items'] as $item) {
             $this->addItem($id, $item);
@@ -93,8 +105,20 @@ class PurchaseRequestRepository
         if (!$pr) {
             return null;
         }
+        $pr['description'] = $pr['description'] ?? '';
         $pr['items'] = $this->items((int)$pr['id']);
         return $pr;
+    }
+
+    private function hasRequestDescriptionColumn(): bool
+    {
+        if ($this->hasRequestDescriptionColumn !== null) {
+            return $this->hasRequestDescriptionColumn;
+        }
+
+        $stmt = $this->db->pdo()->query('SHOW COLUMNS FROM purchase_requests LIKE "description"');
+        $this->hasRequestDescriptionColumn = (bool)$stmt->fetch();
+        return $this->hasRequestDescriptionColumn;
     }
 
     private function generateTrackingCode(): string
