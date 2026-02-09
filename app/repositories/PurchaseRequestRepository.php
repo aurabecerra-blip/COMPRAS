@@ -3,6 +3,7 @@ class PurchaseRequestRepository
 {
     private const STATUSES = ['BORRADOR', 'ENVIADA', 'APROBADA', 'RECHAZADA', 'CANCELADA'];
     private ?bool $hasRequestDescriptionColumn = null;
+    private ?string $itemDescriptionColumn = null;
 
     public function __construct(private Database $db)
     {
@@ -60,13 +61,15 @@ class PurchaseRequestRepository
 
     private function addItem(int $prId, array $item): void
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO purchase_request_items (purchase_request_id, description, quantity, unit_price) VALUES (?, ?, ?, ?)');
+        $descriptionColumn = $this->getItemDescriptionColumn();
+        $stmt = $this->db->pdo()->prepare("INSERT INTO purchase_request_items (purchase_request_id, {$descriptionColumn}, quantity, unit_price) VALUES (?, ?, ?, ?)");
         $stmt->execute([$prId, $item['description'], (float)$item['quantity'], (float)$item['unit_price']]);
     }
 
     public function items(int $prId): array
     {
-        $stmt = $this->db->pdo()->prepare('SELECT * FROM purchase_request_items WHERE purchase_request_id = ?');
+        $descriptionColumn = $this->getItemDescriptionColumn();
+        $stmt = $this->db->pdo()->prepare("SELECT id, purchase_request_id, {$descriptionColumn} AS description, quantity, unit_price FROM purchase_request_items WHERE purchase_request_id = ?");
         $stmt->execute([$prId]);
         return $stmt->fetchAll();
     }
@@ -119,6 +122,28 @@ class PurchaseRequestRepository
         $stmt = $this->db->pdo()->query('SHOW COLUMNS FROM purchase_requests LIKE "description"');
         $this->hasRequestDescriptionColumn = (bool)$stmt->fetch();
         return $this->hasRequestDescriptionColumn;
+    }
+
+    private function getItemDescriptionColumn(): string
+    {
+        if ($this->itemDescriptionColumn !== null) {
+            return $this->itemDescriptionColumn;
+        }
+
+        $pdo = $this->db->pdo();
+        $descriptionExists = (bool)$pdo->query('SHOW COLUMNS FROM purchase_request_items LIKE "description"')->fetch();
+        if ($descriptionExists) {
+            $this->itemDescriptionColumn = 'description';
+            return $this->itemDescriptionColumn;
+        }
+
+        $legacyExists = (bool)$pdo->query('SHOW COLUMNS FROM purchase_request_items LIKE "item_description"')->fetch();
+        if ($legacyExists) {
+            $this->itemDescriptionColumn = 'item_description';
+            return $this->itemDescriptionColumn;
+        }
+
+        throw new RuntimeException('La tabla purchase_request_items no tiene columna de descripción compatible.');
     }
 
     private function generateTrackingCode(): string
