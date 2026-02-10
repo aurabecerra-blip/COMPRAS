@@ -55,7 +55,6 @@ CREATE TABLE purchase_requests (
     title VARCHAR(200) NOT NULL,
     justification TEXT NOT NULL,
     area VARCHAR(150) NOT NULL,
-    cost_center VARCHAR(100) NOT NULL,
     description TEXT NULL,
     status ENUM('BORRADOR','ENVIADA','APROBADA','RECHAZADA','CANCELADA') NOT NULL DEFAULT 'BORRADOR',
     rejection_reason TEXT NULL,

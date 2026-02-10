@@ -1,6 +1,5 @@
 <?php
 $areaOptions = setting_list($settingsRepo, 'form_areas', ['Operaciones', 'Finanzas', 'TI', 'Calidad']);
-$costCenters = setting_list($settingsRepo, 'form_cost_centers', ['CC-001', 'CC-002', 'CC-003']);
 $statuses = [
     'BORRADOR' => ['label' => 'Borrador', 'icon' => 'bi-pencil', 'color' => 'secondary'],
     'ENVIADA' => ['label' => 'Enviada', 'icon' => 'bi-send', 'color' => 'info'],
@@ -55,25 +54,14 @@ $steps = ['BORRADOR', 'ENVIADA', 'APROBADA'];
                 <label class="form-label">Justificación</label>
                 <textarea name="justification" class="form-control" rows="3" required><?= htmlspecialchars($pr['justification']) ?></textarea>
             </div>
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">Área</label>
-                    <input list="areaOptions" type="text" name="area" class="form-control" value="<?= htmlspecialchars($pr['area']) ?>" required>
-                    <datalist id="areaOptions">
-                        <?php foreach ($areaOptions as $option): ?>
-                            <option value="<?= htmlspecialchars($option) ?>"></option>
-                        <?php endforeach; ?>
-                    </datalist>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Centro de costo</label>
-                    <input list="ccOptions" type="text" name="cost_center" class="form-control" value="<?= htmlspecialchars($pr['cost_center']) ?>" required>
-                    <datalist id="ccOptions">
-                        <?php foreach ($costCenters as $option): ?>
-                            <option value="<?= htmlspecialchars($option) ?>"></option>
-                        <?php endforeach; ?>
-                    </datalist>
-                </div>
+            <div class="mb-3">
+                <label class="form-label">Área</label>
+                <input list="areaOptions" type="text" name="area" class="form-control" value="<?= htmlspecialchars($pr['area']) ?>" required>
+                <datalist id="areaOptions">
+                    <?php foreach ($areaOptions as $option): ?>
+                        <option value="<?= htmlspecialchars($option) ?>"></option>
+                    <?php endforeach; ?>
+                </datalist>
             </div>
             <div class="mb-3">
                 <label class="form-label">Descripción</label>
@@ -85,13 +73,13 @@ $steps = ['BORRADOR', 'ENVIADA', 'APROBADA'];
                     <div class="row g-2 mb-2">
                         <div class="col-md-6"><input type="text" name="items[<?= $idx ?>][description]" class="form-control" value="<?= htmlspecialchars($item['description']) ?>"></div>
                         <div class="col-md-3"><input type="number" step="0.01" name="items[<?= $idx ?>][quantity]" class="form-control" value="<?= $item['quantity'] ?>"></div>
-                        <div class="col-md-3"><input type="number" step="0.01" name="items[<?= $idx ?>][unit_price]" class="form-control" value="<?= $item['unit_price'] ?>"></div>
+                        
                     </div>
                 <?php endforeach; ?>
                 <div class="row g-2 mb-2">
                     <div class="col-md-6"><input type="text" name="items[new][description]" class="form-control" placeholder="Descripción"></div>
                     <div class="col-md-3"><input type="number" step="0.01" name="items[new][quantity]" class="form-control" placeholder="Cantidad"></div>
-                    <div class="col-md-3"><input type="number" step="0.01" name="items[new][unit_price]" class="form-control" placeholder="Precio Unit."></div>
+                    
                 </div>
             </div>
             <div class="mb-3">

@@ -1,6 +1,5 @@
 <?php
 $areaOptions = setting_list($settingsRepo, 'form_areas', ['Operaciones', 'Finanzas', 'TI', 'Calidad']);
-$costCenters = setting_list($settingsRepo, 'form_cost_centers', ['CC-001', 'CC-002', 'CC-003']);
 ?>
 <?php include __DIR__ . '/../layout/header.php'; ?>
 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -24,25 +23,14 @@ $costCenters = setting_list($settingsRepo, 'form_cost_centers', ['CC-001', 'CC-0
                         <label class="form-label">Justificación</label>
                         <textarea name="justification" class="form-control" rows="3" placeholder="Explica el por qué de la necesidad" required></textarea>
                     </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Área</label>
-                            <input list="areaOptions" type="text" name="area" class="form-control" placeholder="Selecciona o escribe" required>
-                            <datalist id="areaOptions">
-                                <?php foreach ($areaOptions as $option): ?>
-                                    <option value="<?= htmlspecialchars($option) ?>"></option>
-                                <?php endforeach; ?>
-                            </datalist>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Centro de costo</label>
-                            <input list="ccOptions" type="text" name="cost_center" class="form-control" placeholder="Selecciona o escribe" required>
-                            <datalist id="ccOptions">
-                                <?php foreach ($costCenters as $option): ?>
-                                    <option value="<?= htmlspecialchars($option) ?>"></option>
-                                <?php endforeach; ?>
-                            </datalist>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Área</label>
+                        <input list="areaOptions" type="text" name="area" class="form-control" placeholder="Selecciona o escribe" required>
+                        <datalist id="areaOptions">
+                            <?php foreach ($areaOptions as $option): ?>
+                                <option value="<?= htmlspecialchars($option) ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Descripción</label>
@@ -51,13 +39,13 @@ $costCenters = setting_list($settingsRepo, 'form_cost_centers', ['CC-001', 'CC-0
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <label class="form-label mb-0">Ítems</label>
-                            <small class="text-muted">Mínimo un ítem con cantidad y precio</small>
+                            <small class="text-muted">Mínimo un ítem con descripción y cantidad</small>
                         </div>
                         <?php for ($i = 0; $i < 3; $i++): ?>
                             <div class="row g-2 mb-2">
                                 <div class="col-md-6"><input type="text" name="items[<?= $i ?>][description]" class="form-control" placeholder="Descripción"></div>
                                 <div class="col-md-3"><input type="number" step="0.01" name="items[<?= $i ?>][quantity]" class="form-control" placeholder="Cantidad"></div>
-                                <div class="col-md-3"><input type="number" step="0.01" name="items[<?= $i ?>][unit_price]" class="form-control" placeholder="Precio Unit."></div>
+                                
                             </div>
                         <?php endfor; ?>
                     </div>
