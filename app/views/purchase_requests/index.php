@@ -39,6 +39,7 @@ $statusBadges = [
                                 <div class="btn-group btn-group-sm" role="group">
                                     <a class="btn btn-outline-secondary" href="<?= htmlspecialchars(route_to('purchase_request_edit', ['id' => $r['id']])) ?>"><i class="bi bi-pencil-square"></i></a>
                                     <a class="btn btn-outline-primary" href="<?= htmlspecialchars(route_to('quotations', ['id' => $r['id']])) ?>"><i class="bi bi-card-checklist"></i></a>
+                                    <a class="btn btn-outline-success" href="<?= htmlspecialchars(route_to('provider_selection', ['id' => $r['id']])) ?>" title="Cotizaciones y Selección de Proveedor"><i class="bi bi-clipboard2-check"></i></a>
                                     <a class="btn btn-outline-dark" href="<?= htmlspecialchars(route_to('track', ['code' => $r['tracking_code'] ?? ''])) ?>"><i class="bi bi-qr-code"></i></a>
                                 </div>
                                 <?php if ($r['status'] === 'BORRADOR'): ?>

@@ -84,3 +84,44 @@ Aplicativo web en PHP 8 + MySQL para control de compras alineado al flujo ISO 90
 ## Notas
 - Las rutas del front se resuelven mediante `index.php?page=<ruta>`.
 - El logo por defecto está en `public/assets/aos-logo.svg`; puede cambiarse desde Configuración.
+
+## Módulo de Evaluación y Selección de Proveedores por Cotizaciones (mínimo 3)
+
+### Instalación
+1. Ejecuta migración del módulo:
+   ```sql
+   SOURCE sql/migration_provider_selection_module.sql;
+   ```
+2. (Opcional) carga datos demo:
+   ```sql
+   SOURCE sql/seed_provider_selection_demo.sql;
+   ```
+
+### Flujo de uso
+1. Ingresa a **Solicitudes** y abre el botón **Cotizaciones y Selección de Proveedor**.
+2. Registra cotizaciones (mínimo 3 proveedores diferentes para cerrar):
+   - proveedor,
+   - tipo de compra,
+   - valor/moneda,
+   - plazo,
+   - forma de pago,
+   - anexos (pdf/jpg/png/xlsx, máximo 10MB por archivo).
+3. En **Evaluación comparativa** diligencia criterios por proveedor y usa **Guardar borrador**.
+4. Usa **Cerrar y seleccionar ganador** para:
+   - validar mínimo de 3 proveedores distintos,
+   - resolver ganador por mayor puntaje,
+   - desempatar por Precios,
+   - forzar ganador manual con justificación si persiste empate,
+   - generar PDF de análisis en:
+     `/public/storage/seleccion_proveedor/{purchase_request_id}/analisis_seleccion_{timestamp}.pdf`.
+5. Descarga el PDF desde el mismo módulo (enlace **Descargar análisis PDF**).
+
+### Almacenamiento de archivos
+- Cotizaciones: `/public/storage/cotizaciones/{purchase_request_id}/{provider_id}/`
+- PDF evaluación cerrada: `/public/storage/seleccion_proveedor/{purchase_request_id}/`
+
+### Componentes implementados
+- Controladores: `ProviderQuoteController`, `ProviderSelectionController`
+- Repositorios: `ProviderQuoteRepository`, `ProviderSelectionRepository`
+- Servicios: `ProviderSelectionScoringService`, `PdfGeneratorService`
+- Vista principal: `app/views/provider_selection/index.php`
