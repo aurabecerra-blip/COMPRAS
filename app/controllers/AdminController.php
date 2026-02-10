@@ -32,7 +32,12 @@ class AdminController
         $this->auth->requireRole(['administrador']);
 
         $search = trim($_GET['search'] ?? '');
-        $users = $this->users->all($search);
+        $status = strtolower(trim($_GET['status'] ?? 'all'));
+        if (!in_array($status, ['all', 'active', 'inactive'], true)) {
+            $status = 'all';
+        }
+
+        $users = $this->users->all($search, $status);
         $roles = $this->users->validRoles();
         include __DIR__ . '/../views/admin/users.php';
     }
@@ -62,8 +67,14 @@ class AdminController
             return;
         }
 
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            $this->flash->add('danger', 'El email no tiene un formato válido.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
         if (!CorporateEmailValidator::isValid($data['email'])) {
-            $this->flash->add('danger', 'El email debe ser corporativo y terminar en @aossas.com.');
+            $this->flash->add('danger', 'Solo se permite el dominio @aossas.com.');
             header('Location: ' . route_to('admin_users'));
             return;
         }
@@ -113,8 +124,14 @@ class AdminController
             return;
         }
 
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            $this->flash->add('danger', 'El email no tiene un formato válido.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
         if (!CorporateEmailValidator::isValid($data['email'])) {
-            $this->flash->add('danger', 'El email debe ser corporativo y terminar en @aossas.com.');
+            $this->flash->add('danger', 'Solo se permite el dominio @aossas.com.');
             header('Location: ' . route_to('admin_users'));
             return;
         }

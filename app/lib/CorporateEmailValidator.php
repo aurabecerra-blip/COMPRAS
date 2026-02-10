@@ -7,6 +7,7 @@ class CorporateEmailValidator
         if (!filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
             return false;
         }
-        return str_ends_with($normalized, '@aossas.com');
+
+        return (bool)preg_match('/^[^@\s]+@aossas\.com$/i', $normalized);
     }
 }
