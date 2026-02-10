@@ -11,12 +11,14 @@
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead class="table-light">
-                    <tr><th>Nombre</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th class="text-center">Cotizaciones</th><th class="text-center">OC</th><th class="text-center">OC Abiertas</th><th class="text-end">Monto OC</th><th class="text-end">Lead time prom.</th></tr>
+                    <tr><th>Nombre</th><th>NIT</th><th>Servicio</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th class="text-center">Cotizaciones</th><th class="text-center">OC</th><th class="text-center">OC Abiertas</th><th class="text-end">Monto OC</th><th class="text-end">Lead time prom.</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $s): ?>
                         <tr>
                             <td class="fw-semibold"><?= htmlspecialchars($s['name']) ?></td>
+                            <td><?= htmlspecialchars($s['nit'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($s['service'] ?? '') ?></td>
                             <td><?= htmlspecialchars($s['contact']) ?></td>
                             <td><?= htmlspecialchars($s['email']) ?></td>
                             <td><?= htmlspecialchars($s['phone']) ?></td>
@@ -41,6 +43,8 @@
                 <form method="post" action="<?= htmlspecialchars(route_to('supplier_store')) ?>">
                     <div class="row g-2 mb-2">
                         <div class="col-md-3"><input type="text" name="name" class="form-control" placeholder="Nombre" required></div>
+                        <div class="col-md-3"><input type="text" name="nit" class="form-control" placeholder="NIT"></div>
+                        <div class="col-md-3"><input type="text" name="service" class="form-control" placeholder="Servicio"></div>
                         <div class="col-md-3"><input type="text" name="contact" class="form-control" placeholder="Contacto"></div>
                         <div class="col-md-3"><input type="email" name="email" class="form-control" placeholder="Email"></div>
                         <div class="col-md-3"><input type="text" name="phone" class="form-control" placeholder="Teléfono"></div>

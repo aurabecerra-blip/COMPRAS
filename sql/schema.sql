@@ -43,10 +43,36 @@ CREATE TABLE notification_logs (
 CREATE TABLE suppliers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
+    nit VARCHAR(50) NULL,
+    service VARCHAR(255) NULL,
     contact VARCHAR(150),
     email VARCHAR(150),
     phone VARCHAR(50),
     created_at DATETIME NOT NULL
+);
+
+CREATE TABLE supplier_evaluations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    supplier_id INT NOT NULL,
+    evaluator_user_id INT NOT NULL,
+    evaluation_date DATETIME NOT NULL,
+    total_score INT NOT NULL,
+    status_label ENUM('Aprobado','Condicional','No aprobado') NOT NULL,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+    FOREIGN KEY (evaluator_user_id) REFERENCES users(id)
+);
+
+CREATE TABLE supplier_evaluation_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    evaluation_id INT NOT NULL,
+    criterion_code VARCHAR(80) NOT NULL,
+    criterion_name VARCHAR(255) NOT NULL,
+    option_key VARCHAR(80) NOT NULL,
+    option_label VARCHAR(255) NOT NULL,
+    score INT NOT NULL,
+    notes VARCHAR(255) NULL,
+    FOREIGN KEY (evaluation_id) REFERENCES supplier_evaluations(id) ON DELETE CASCADE
 );
 
 CREATE TABLE purchase_requests (
@@ -176,6 +202,7 @@ INSERT INTO notification_types (code, name, description, channel, is_active) VAL
 ('purchase_request_sent', 'Solicitud enviada', 'Envío de solicitud a aprobación', 'email', 1),
 ('purchase_request_approved', 'Solicitud aprobada', 'Aprobación de una solicitud', 'email', 1),
 ('purchase_request_rejected', 'Solicitud rechazada', 'Rechazo de una solicitud', 'email', 1),
+('supplier_evaluation_completed', 'Evaluación de proveedor completada', 'Envío del resultado de evaluación al proveedor', 'email', 1),
 ('test_email', 'Correo de prueba', 'Mensaje de prueba para SMTP', 'email', 1);
 
 INSERT INTO notification_type_roles (notification_type_id, role)

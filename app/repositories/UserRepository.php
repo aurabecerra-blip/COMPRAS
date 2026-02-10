@@ -1,7 +1,7 @@
 <?php
 class UserRepository
 {
-    private const VALID_ROLES = ['administrador', 'aprobador', 'compras', 'recepcion', 'solicitante'];
+    private const VALID_ROLES = ['administrador', 'lider', 'aprobador', 'compras', 'recepcion', 'solicitante'];
 
     public function __construct(private Database $db)
     {

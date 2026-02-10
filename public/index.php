@@ -38,6 +38,16 @@ $poController = new PurchaseOrderController(
     $authMiddleware
 );
 $supplierController = new SupplierController(new SupplierRepository($db), $flash, $audit, $auth, $authMiddleware);
+$supplierEvaluationController = new SupplierEvaluationController(
+    new SupplierRepository($db),
+    new SupplierEvaluationRepository($db),
+    new SupplierEvaluationCalculator(),
+    $notificationService,
+    $flash,
+    $audit,
+    $auth,
+    $authMiddleware
+);
 $adminController = new AdminController(
     $settingsRepo,
     $userRepo,
@@ -143,6 +153,12 @@ switch ($page) {
         break;
     case 'supplier_store':
         $supplierController->store();
+        break;
+    case 'supplier_evaluations':
+        $supplierEvaluationController->index();
+        break;
+    case 'supplier_evaluation_store':
+        $supplierEvaluationController->store();
         break;
     case 'audit':
         $auditController->index();

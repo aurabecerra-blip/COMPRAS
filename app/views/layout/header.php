@@ -159,6 +159,7 @@ $navItems = [
     ['label' => 'Cotizaciones', 'route' => route_to('purchase_requests'), 'icon' => 'bi-card-checklist', 'visible' => in_array($role, ['compras', 'administrador'], true)],
     ['label' => 'Órdenes de compra', 'route' => route_to('purchase_orders'), 'icon' => 'bi-receipt', 'visible' => in_array($role, ['compras', 'recepcion', 'administrador'], true)],
     ['label' => 'Proveedores', 'route' => route_to('suppliers'), 'icon' => 'bi-people', 'visible' => in_array($role, ['compras', 'administrador'], true)],
+    ['label' => 'Evaluación proveedores', 'route' => route_to('supplier_evaluations'), 'icon' => 'bi-clipboard-check', 'visible' => in_array($role, ['lider', 'administrador'], true)],
     ['label' => 'Auditoría', 'route' => route_to('audit'), 'icon' => 'bi-clipboard-data', 'visible' => in_array($role, ['administrador'], true)],
     ['label' => 'Configuración', 'route' => route_to('admin'), 'icon' => 'bi-gear', 'visible' => in_array($role, ['administrador'], true)],
     ['label' => 'Usuarios', 'route' => route_to('admin_users'), 'icon' => 'bi-people-fill', 'visible' => in_array($role, ['administrador'], true)],
