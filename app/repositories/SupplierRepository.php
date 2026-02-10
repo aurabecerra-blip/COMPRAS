@@ -30,14 +30,14 @@ class SupplierRepository
 
     public function create(array $data): void
     {
-        $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, contact, email, phone, created_at) VALUES (?, ?, ?, ?, NOW())');
-        $stmt->execute([$data['name'], $data['contact'], $data['email'], $data['phone']]);
+        $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, nit, service, contact, email, phone, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+        $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone']]);
     }
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->pdo()->prepare('UPDATE suppliers SET name = ?, contact = ?, email = ?, phone = ? WHERE id = ?');
-        $stmt->execute([$data['name'], $data['contact'], $data['email'], $data['phone'], $id]);
+        $stmt = $this->db->pdo()->prepare('UPDATE suppliers SET name = ?, nit = ?, service = ?, contact = ?, email = ?, phone = ? WHERE id = ?');
+        $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone'], $id]);
     }
 
     public function delete(int $id): void

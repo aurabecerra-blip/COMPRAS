@@ -1,6 +1,6 @@
-INSERT INTO suppliers (name, contact, email, phone, created_at) VALUES
-('Proveedor Alfa', 'Juan Pérez', 'ventas@alfa.com', '555-1111', NOW()),
-('Proveedor Beta', 'María López', 'contacto@beta.com', '555-2222', NOW());
+INSERT INTO suppliers (name, nit, service, contact, email, phone, created_at) VALUES
+('Proveedor Alfa', '900123456-7', 'Suministro de equipos', 'Juan Pérez', 'ventas@alfa.com', '555-1111', NOW()),
+('Proveedor Beta', '901987654-2', 'Servicios de mantenimiento', 'María López', 'contacto@beta.com', '555-2222', NOW());
 
 INSERT INTO settings (`key`, value) VALUES
 ('company_name', 'AOS'),
@@ -24,6 +24,7 @@ INSERT INTO notification_types (code, name, description, channel, is_active) VAL
 ('purchase_request_sent', 'Solicitud enviada', 'Envío de solicitud a aprobación', 'email', 1),
 ('purchase_request_approved', 'Solicitud aprobada', 'Aprobación de una solicitud', 'email', 1),
 ('purchase_request_rejected', 'Solicitud rechazada', 'Rechazo de una solicitud', 'email', 1),
+('supplier_evaluation_completed', 'Evaluación de proveedor completada', 'Envío del resultado de evaluación al proveedor', 'email', 1),
 ('test_email', 'Correo de prueba', 'Mensaje de prueba para SMTP', 'email', 1)
 ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), channel = VALUES(channel), is_active = VALUES(is_active);
 

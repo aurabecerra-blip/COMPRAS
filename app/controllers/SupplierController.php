@@ -19,6 +19,8 @@ class SupplierController
         $this->auth->requireRole(['compras', 'administrador']);
         $data = [
             'name' => trim($_POST['name'] ?? ''),
+            'nit' => trim($_POST['nit'] ?? ''),
+            'service' => trim($_POST['service'] ?? ''),
             'contact' => trim($_POST['contact'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),

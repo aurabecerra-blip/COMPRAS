@@ -41,7 +41,35 @@ Aplicativo web en PHP 8 + MySQL para control de compras alineado al flujo ISO 90
 - Recepción por ítem con evidencia opcional (PDF/imagen).
 - Adjuntos almacenados en `/public/uploads` y auditados.
 - Bitácora de auditoría con detalle JSON en `audit_log`.
+- Módulo de **Evaluación / Reevaluación de proveedores** con criterios ponderados, histórico por proveedor/fecha, trazabilidad de líder evaluador y envío automático por correo al proveedor.
 - Bootstrap 5 con branding AOS configurable (`company_name`, `brand_logo_path`, colores).
+
+## Evaluación de proveedores
+- Acceso: menú **Evaluación proveedores** para roles `lider` y `administrador`.
+- Encabezado registrado por evaluación:
+  - proveedor (nombre, NIT, servicio),
+  - fecha automática,
+  - líder evaluador (usuario autenticado),
+  - puntaje total,
+  - estado (`Aprobado`, `Condicional`, `No aprobado`).
+- Cálculo automático (máximo 100 puntos):
+  1. Tiempos de entrega (20): a tiempo = 20, incumplimiento = descuento de 2 por evento (mínimo 0).
+  2. Calidad (40): cumple = 40, no cumple = 0.
+  3. Postventa/garantías (10): cumplimiento oportuno = 10, parcial/no cumple = 0.
+  4. Atención a SQR (10): sin quejas = 10, atención 1-5 días = 5, no oportuna = 0.
+  5. Documentos (20): completos = 20, incompletos/demora = 0.
+- Clasificación automática:
+  - `>= 80`: Aprobado
+  - `60-79`: Condicional
+  - `< 60`: No aprobado
+- Al guardar, se envía correo automático usando la configuración central de notificaciones (`settings`) y el tipo `supplier_evaluation_completed`.
+
+### Prueba rápida del módulo
+1. Crear/actualizar un usuario con rol `lider` o `administrador`.
+2. Registrar un proveedor con correo válido, NIT y servicio.
+3. Ingresar a **Evaluación proveedores**, diligenciar criterios y guardar.
+4. Verificar en pantalla el histórico, puntaje y estado.
+5. Verificar en `notification_logs` que se registró el envío al correo del proveedor.
 
 ## Estructura
 - `public/`: punto de entrada `index.php`, assets y uploads.
