@@ -20,11 +20,126 @@ class AdminController
         $this->authMiddleware->check();
         $this->auth->requireRole(['administrador']);
         $settings = $this->settings->all();
-        $users = $this->users->all();
         $notificationTypes = $this->notificationTypes->all();
         $notificationLogs = $this->notificationLogs->latest();
         $settingsRepo = $this->settings;
         include __DIR__ . '/../views/admin/index.php';
+    }
+
+    public function users(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['administrador']);
+
+        $search = trim($_GET['search'] ?? '');
+        $users = $this->users->all($search);
+        $roles = $this->users->validRoles();
+        include __DIR__ . '/../views/admin/users.php';
+    }
+
+    public function storeUser(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['administrador']);
+
+        $data = [
+            'name' => trim($_POST['name'] ?? ''),
+            'email' => trim($_POST['email'] ?? ''),
+            'role' => trim($_POST['role'] ?? ''),
+            'password' => $_POST['password'] ?? '',
+            'is_active' => isset($_POST['is_active']) ? 1 : 0,
+        ];
+
+        if ($data['name'] === '' || $data['email'] === '' || $data['password'] === '') {
+            $this->flash->add('danger', 'Nombre, email y contraseña son obligatorios.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        if (!$this->users->isValidRole($data['role'])) {
+            $this->flash->add('danger', 'Rol inválido.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        if (!CorporateEmailValidator::isValid($data['email'])) {
+            $this->flash->add('danger', 'El email debe ser corporativo y terminar en @aossas.com.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        if ($this->users->emailExists($data['email'])) {
+            $this->flash->add('danger', 'El email ya está registrado.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        $id = $this->users->create($data);
+        $this->audit->log($this->auth->user()['id'], 'user_create', ['user_id' => $id, 'email' => $data['email'], 'role' => $data['role']]);
+        $this->flash->add('success', 'Usuario creado.');
+        header('Location: ' . route_to('admin_users'));
+    }
+
+    public function updateUser(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['administrador']);
+
+        $id = (int)($_POST['id'] ?? 0);
+        $user = $this->users->findById($id);
+        if (!$user) {
+            $this->flash->add('danger', 'Usuario no encontrado.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        $data = [
+            'name' => trim($_POST['name'] ?? ''),
+            'email' => trim($_POST['email'] ?? ''),
+            'role' => trim($_POST['role'] ?? ''),
+            'is_active' => isset($_POST['is_active']) ? 1 : 0,
+        ];
+        $newPassword = $_POST['new_password'] ?? '';
+
+        if ($data['name'] === '' || $data['email'] === '') {
+            $this->flash->add('danger', 'Nombre y email son obligatorios.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        if (!$this->users->isValidRole($data['role'])) {
+            $this->flash->add('danger', 'Rol inválido.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        if (!CorporateEmailValidator::isValid($data['email'])) {
+            $this->flash->add('danger', 'El email debe ser corporativo y terminar en @aossas.com.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        if ($this->users->emailExists($data['email'], $id)) {
+            $this->flash->add('danger', 'El email ya está registrado por otro usuario.');
+            header('Location: ' . route_to('admin_users'));
+            return;
+        }
+
+        $this->users->update($id, $data);
+
+        if ($newPassword !== '') {
+            $this->users->resetPassword($id, $newPassword);
+        }
+
+        $this->audit->log($this->auth->user()['id'], 'user_update', [
+            'user_id' => $id,
+            'email' => $data['email'],
+            'role' => $data['role'],
+            'is_active' => $data['is_active'],
+            'password_reset' => $newPassword !== '',
+        ]);
+        $this->flash->add('success', 'Usuario actualizado.');
+        header('Location: ' . route_to('admin_users'));
     }
 
     public function updateSettings(): void
@@ -175,26 +290,5 @@ class AdminController
             'from_name' => $fromName,
             'test_email' => $testEmail,
         ];
-    }
-
-    public function storeUser(): void
-    {
-        $this->authMiddleware->check();
-        $this->auth->requireRole(['administrador']);
-        $data = [
-            'name' => trim($_POST['name'] ?? ''),
-            'email' => trim($_POST['email'] ?? ''),
-            'role' => $_POST['role'] ?? '',
-            'password' => $_POST['password'] ?? '',
-        ];
-        if ($data['name'] === '' || $data['email'] === '' || $data['password'] === '') {
-            $this->flash->add('danger', 'Todos los campos son obligatorios');
-            header('Location: ' . route_to('admin'));
-            return;
-        }
-        $this->users->create($data);
-        $this->audit->log($this->auth->user()['id'], 'user_create', ['email' => $data['email'], 'role' => $data['role']]);
-        $this->flash->add('success', 'Usuario creado');
-        header('Location: ' . route_to('admin'));
     }
 }
