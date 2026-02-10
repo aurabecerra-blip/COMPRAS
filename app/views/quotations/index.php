@@ -9,6 +9,11 @@ foreach ($suppliers as $s) {
 }
 ?>
 <h2>Cotizaciones para PR #<?= $pr['id'] ?> - <?= htmlspecialchars($pr['title']) ?></h2>
+
+<div class="mb-3">
+    <a class="btn btn-outline-success" href="<?= htmlspecialchars(route_to('provider_selection', ['id' => $pr['id']])) ?>">Cotizaciones y Selección de Proveedor</a>
+</div>
+
 <p>Estado: <?= $pr['status'] ?></p>
 <?php if ($pr['selected_supplier_id']): ?>
     <div class="alert alert-info">

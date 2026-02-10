@@ -38,6 +38,29 @@ $poController = new PurchaseOrderController(
     $authMiddleware
 );
 $supplierController = new SupplierController(new SupplierRepository($db), $flash, $audit, $auth, $authMiddleware);
+
+$providerQuoteController = new ProviderQuoteController(
+    new ProviderQuoteRepository($db),
+    new PurchaseRequestRepository($db),
+    new SupplierRepository($db),
+    new ProviderSelectionRepository($db),
+    $audit,
+    $auth,
+    $flash,
+    $authMiddleware
+);
+$providerSelectionController = new ProviderSelectionController(
+    new PurchaseRequestRepository($db),
+    new SupplierRepository($db),
+    new ProviderQuoteRepository($db),
+    new ProviderSelectionRepository($db),
+    new ProviderSelectionScoringService(),
+    new PdfGeneratorService(),
+    $audit,
+    $auth,
+    $flash,
+    $authMiddleware
+);
 $supplierEvaluationController = new SupplierEvaluationController(
     new SupplierRepository($db),
     new SupplierEvaluationRepository($db),
@@ -154,6 +177,22 @@ switch ($page) {
         break;
     case 'supplier_store':
         $supplierController->store();
+        break;
+
+    case 'provider_selection':
+        $providerQuoteController->index();
+        break;
+    case 'provider_quote_store':
+        $providerQuoteController->store();
+        break;
+    case 'provider_selection_evaluate':
+        $providerSelectionController->evaluate();
+        break;
+    case 'provider_selection_close':
+        $providerSelectionController->close();
+        break;
+    case 'provider_selection_pdf':
+        $providerSelectionController->pdf();
         break;
     case 'supplier_evaluations':
         $supplierEvaluationController->index();
