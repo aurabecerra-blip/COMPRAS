@@ -17,8 +17,13 @@ Aplicativo web en PHP 8 + MySQL para control de compras alineado al flujo ISO 90
    ```sql
    SOURCE sql/migration_users_corporate_domain.sql;
    ```
-3. Configurar credenciales de BD en `app/config/config.php`.
-4. Servir la carpeta `public/` (por ejemplo con `php -S localhost:8000 -t public`).
+3. (Opcional) Si necesitas recuperar acceso administrativo, ejecuta:
+   ```sql
+   SOURCE sql/repair_users_admin_and_domains.sql;
+   ```
+   Esto garantiza el usuario `admin.portal@aossas.com` con contraseña `AdminAOS2026!`.
+4. Configurar credenciales de BD en `app/config/config.php`.
+5. Servir la carpeta `public/` (por ejemplo con `php -S localhost:8000 -t public`).
 
 ## Primer uso
 - Si no existe ningún `administrador` activo, el sistema mostrará un wizard para crear el primer administrador.
