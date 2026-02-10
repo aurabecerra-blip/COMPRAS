@@ -54,8 +54,6 @@
                         <div class="text-end">
                             <p class="text-muted mb-1 small">Área</p>
                             <p class="fw-semibold mb-0"><?= htmlspecialchars($pr['area']) ?></p>
-                            <p class="text-muted mb-1 small">Centro de costo</p>
-                            <p class="fw-semibold mb-0"><?= htmlspecialchars($pr['cost_center']) ?></p>
                         </div>
                     </div>
 
@@ -100,7 +98,6 @@
                                     <h6 class="text-muted text-uppercase mb-2">Detalle</h6>
                                     <ul class="list-unstyled mb-0">
                                         <li class="mb-2"><i class="bi bi-diagram-3 text-primary"></i> Área: <strong><?= htmlspecialchars($pr['area']) ?></strong></li>
-                                        <li class="mb-2"><i class="bi bi-cash-coin text-success"></i> Centro de costo: <strong><?= htmlspecialchars($pr['cost_center']) ?></strong></li>
                                         <li class="mb-0"><i class="bi bi-file-earmark-text text-secondary"></i> Descripción: <strong><?= $pr['description'] ? htmlspecialchars($pr['description']) : 'N/A' ?></strong></li>
                                     </ul>
                                 </div>

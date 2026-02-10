@@ -88,7 +88,7 @@ class PurchaseRequestController
         $pr = $this->repo->find($id);
         if ($pr && $pr['status'] === 'BORRADOR') {
             if (!$this->repo->canSend($pr)) {
-                $this->flash->add('danger', 'Completa justificación, área, centro de costo e ítems antes de enviar.');
+                $this->flash->add('danger', 'Completa justificación, área e ítems antes de enviar.');
             } else {
                 $this->repo->changeStatus($id, 'ENVIADA');
                 $this->audit->log($this->auth->user()['id'], 'pr_send', ['pr_id' => $id]);
@@ -228,7 +228,6 @@ class PurchaseRequestController
         $title = trim($_POST['title'] ?? '');
         $justification = trim($_POST['justification'] ?? '');
         $area = trim($_POST['area'] ?? '');
-        $cost_center = trim($_POST['cost_center'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $items = $_POST['items'] ?? [];
         $cleanItems = [];
@@ -237,18 +236,18 @@ class PurchaseRequestController
                 $cleanItems[] = [
                     'description' => trim($item['description']),
                     'quantity' => (float)$item['quantity'],
-                    'unit_price' => (float)$item['unit_price'],
+                    'unit_price' => 0,
                 ];
             }
         }
 
-        if ($title === '' || $justification === '' || $area === '' || $cost_center === '' || empty($cleanItems)) {
-            $this->flash->add('danger', 'Título, justificación, área, centro de costo e ítems son obligatorios');
+        if ($title === '' || $justification === '' || $area === '' || empty($cleanItems)) {
+            $this->flash->add('danger', 'Título, justificación, área e ítems son obligatorios');
             $fallback = $_SERVER['HTTP_REFERER'] ?? route_to('purchase_requests');
             header('Location: ' . $fallback);
             exit;
         }
-        return compact('title', 'description', 'justification', 'area', 'cost_center') + ['items' => $cleanItems];
+        return compact('title', 'description', 'justification', 'area') + ['items' => $cleanItems];
     }
 
     private function handleUpload(int $prId): void
