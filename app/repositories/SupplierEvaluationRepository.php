@@ -62,6 +62,13 @@ class SupplierEvaluationRepository
         return $evaluation;
     }
 
+
+    public function attachPdf(int $evaluationId, string $pdfPath): void
+    {
+        $stmt = $this->db->pdo()->prepare('UPDATE supplier_evaluations SET pdf_path = ? WHERE id = ?');
+        $stmt->execute([$pdfPath, $evaluationId]);
+    }
+
     public function create(array $header, array $details): int
     {
         $pdo = $this->db->pdo();
@@ -69,13 +76,15 @@ class SupplierEvaluationRepository
 
         try {
             $stmt = $pdo->prepare('INSERT INTO supplier_evaluations
-                (supplier_id, evaluator_user_id, evaluation_date, total_score, status_label, created_at)
-                VALUES (?, ?, NOW(), ?, ?, NOW())');
+                (supplier_id, evaluator_user_id, evaluation_date, total_score, status_label, observations, pdf_path, created_at)
+                VALUES (?, ?, NOW(), ?, ?, ?, ?, NOW())');
             $stmt->execute([
                 $header['supplier_id'],
                 $header['evaluator_user_id'],
                 $header['total_score'],
                 $header['status_label'],
+                $header['observations'] ?? null,
+                $header['pdf_path'] ?? null,
             ]);
 
             $evaluationId = (int)$pdo->lastInsertId();

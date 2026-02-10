@@ -43,6 +43,7 @@ $supplierEvaluationController = new SupplierEvaluationController(
     new SupplierEvaluationRepository($db),
     new SupplierEvaluationCalculator(),
     $notificationService,
+    new SupplierEvaluationPdfBuilder(),
     $flash,
     $audit,
     $auth,

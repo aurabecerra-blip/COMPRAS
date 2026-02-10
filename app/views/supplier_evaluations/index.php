@@ -93,6 +93,11 @@ if ($showId > 0) {
                         </select>
                     </div>
 
+                    <div class="col-12">
+                        <label class="form-label">Observaciones</label>
+                        <textarea name="observations" class="form-control" rows="3" maxlength="1000" placeholder="Comentarios generales de la evaluación"></textarea>
+                    </div>
+
                     <div class="col-12 text-end">
                         <button class="btn btn-primary"><i class="bi bi-send-check"></i> Guardar y notificar proveedor</button>
                     </div>
@@ -142,6 +147,7 @@ if ($showId > 0) {
                                 <th>Líder evaluador</th>
                                 <th class="text-end">Puntaje</th>
                                 <th>Estado</th>
+                                <th>PDF</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -156,10 +162,17 @@ if ($showId > 0) {
                                     <td><?= htmlspecialchars($evaluation['evaluator_name']) ?></td>
                                     <td class="text-end fw-semibold"><?= (int)$evaluation['total_score'] ?></td>
                                     <td><span class="badge bg-secondary-subtle text-dark"><?= htmlspecialchars($evaluation['status_label']) ?></span></td>
+                                    <td>
+                                        <?php if (!empty($evaluation['pdf_path'])): ?>
+                                            <a href="<?= htmlspecialchars($evaluation['pdf_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver PDF</a>
+                                        <?php else: ?>
+                                            <span class="text-muted small">N/D</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (!$evaluations): ?>
-                                <tr><td colspan="5" class="text-center text-muted">Sin evaluaciones registradas.</td></tr>
+                                <tr><td colspan="6" class="text-center text-muted">Sin evaluaciones registradas.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -179,6 +192,12 @@ if ($showId > 0) {
                 <div class="col-md-3"><strong>Servicio:</strong> <?= htmlspecialchars($selectedEvaluation['supplier_service'] ?: 'N/D') ?></div>
                 <div class="col-md-3"><strong>Estado:</strong> <?= htmlspecialchars($selectedEvaluation['status_label']) ?></div>
             </div>
+            <p class="mb-0 mt-2"><strong>Observaciones:</strong> <?= htmlspecialchars($selectedEvaluation['observations'] ?: 'Sin observaciones') ?></p>
+            <?php if (!empty($selectedEvaluation['pdf_path'])): ?>
+                <a href="<?= htmlspecialchars($selectedEvaluation['pdf_path']) ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-3">
+                    <i class="bi bi-file-earmark-pdf"></i> Descargar PDF de evaluación
+                </a>
+            <?php endif; ?>
             <p class="mb-0 mt-2 text-muted">La evaluación se almacena como trazabilidad histórica y no es editable una vez enviada.</p>
         </div>
     </div>
