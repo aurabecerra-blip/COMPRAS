@@ -6,6 +6,7 @@ class SupplierEvaluationController
         private SupplierEvaluationRepository $evaluations,
         private SupplierEvaluationCalculator $calculator,
         private NotificationService $notifications,
+        private SupplierEvaluationPdfBuilder $pdfBuilder,
         private Flash $flash,
         private AuditLogger $audit,
         private Auth $auth,
@@ -71,14 +72,23 @@ class SupplierEvaluationController
         }
 
         $user = $this->auth->user();
+        $observations = trim($_POST['observations'] ?? '');
+
         $evaluationId = $this->evaluations->create([
             'supplier_id' => $supplierId,
             'evaluator_user_id' => (int)$user['id'],
             'total_score' => $result['total_score'],
             'status_label' => $result['status_label'],
+            'observations' => $observations !== '' ? $observations : null,
         ], $result['details']);
 
         $evaluation = $this->evaluations->findWithDetails($evaluationId);
+
+        if ($evaluation) {
+            $pdfPath = $this->pdfBuilder->generate($evaluation);
+            $this->evaluations->attachPdf($evaluationId, $pdfPath);
+            $evaluation['pdf_path'] = $pdfPath;
+        }
 
         if ($evaluation) {
             $subject = 'Resultado de evaluación de proveedor - ' . $evaluation['status_label'];
@@ -120,7 +130,9 @@ class SupplierEvaluationController
             . '<li><strong>Fecha:</strong> ' . htmlspecialchars($evaluation['evaluation_date']) . '</li>'
             . '<li><strong>Puntaje total:</strong> ' . (int)$evaluation['total_score'] . ' / 100</li>'
             . '<li><strong>Resultado:</strong> ' . htmlspecialchars($evaluation['status_label']) . '</li>'
+            . '<li><strong>Observaciones:</strong> ' . htmlspecialchars($evaluation['observations'] ?: 'Sin observaciones') . '</li>'
             . '</ul>'
+            . (!empty($evaluation['pdf_path']) ? '<p><a href="' . htmlspecialchars(base_url($evaluation['pdf_path'])) . '" target="_blank">Descargar evaluación en PDF</a></p>' : '')
             . '<h3>Resumen de criterios</h3>'
             . '<table style="border-collapse:collapse;width:100%;font-size:14px">'
             . '<thead><tr>'

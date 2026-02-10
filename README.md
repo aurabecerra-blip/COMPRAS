@@ -46,6 +46,7 @@ Aplicativo web en PHP 8 + MySQL para control de compras alineado al flujo ISO 90
 
 ## Evaluación de proveedores
 - Acceso: menú **Evaluación proveedores** para roles `lider` y `administrador`.
+- Cada evaluación guarda un campo de **observaciones** y genera automáticamente un **PDF** con logo AOS en `/public/uploads/evaluations`.
 - Encabezado registrado por evaluación:
   - proveedor (nombre, NIT, servicio),
   - fecha automática,

@@ -58,6 +58,8 @@ CREATE TABLE supplier_evaluations (
     evaluation_date DATETIME NOT NULL,
     total_score INT NOT NULL,
     status_label ENUM('Aprobado','Condicional','No aprobado') NOT NULL,
+    observations TEXT NULL,
+    pdf_path VARCHAR(255) NULL,
     created_at DATETIME NOT NULL,
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
     FOREIGN KEY (evaluator_user_id) REFERENCES users(id)
