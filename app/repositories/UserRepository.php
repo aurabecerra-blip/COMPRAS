@@ -7,15 +7,25 @@ class UserRepository
     {
     }
 
-    public function all(string $search = ''): array
+    public function all(string $search = '', string $status = 'all'): array
     {
-        $sql = 'SELECT id, name, email, role, is_active, created_at FROM users';
+        $sql = 'SELECT id, name, email, role, is_active, created_at FROM users WHERE 1=1';
         $params = [];
-        if ($search !== '') {
-            $sql .= ' WHERE name LIKE ? OR email LIKE ? OR role LIKE ?';
-            $like = '%' . $search . '%';
-            $params = [$like, $like, $like];
+
+        if ($status === 'active') {
+            $sql .= ' AND is_active = 1';
+        } elseif ($status === 'inactive') {
+            $sql .= ' AND is_active = 0';
         }
+
+        if ($search !== '') {
+            $sql .= ' AND (name LIKE ? OR email LIKE ? OR role LIKE ?)';
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
         $sql .= ' ORDER BY name';
         $stmt = $this->db->pdo()->prepare($sql);
         $stmt->execute($params);

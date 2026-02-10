@@ -1,5 +1,7 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 <?php $search = trim($_GET['search'] ?? ''); ?>
+<?php $status = strtolower(trim($_GET['status'] ?? 'all')); ?>
+<?php if (!in_array($status, ['all', 'active', 'inactive'], true)) { $status = 'all'; } ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Configuración → Usuarios</h2>
     <a href="<?= htmlspecialchars(route_to('admin')) ?>" class="btn btn-outline-secondary">Volver a administración</a>
@@ -10,8 +12,15 @@
         <h5>Buscar usuarios</h5>
         <form method="get" class="row g-2">
             <input type="hidden" name="page" value="admin_users">
-            <div class="col-md-10">
+            <div class="col-md-6">
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" class="form-control" placeholder="Nombre, email o rol">
+            </div>
+            <div class="col-md-4">
+                <select name="status" class="form-select">
+                    <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>Todos</option>
+                    <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Activos</option>
+                    <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Inactivos</option>
+                </select>
             </div>
             <div class="col-md-2 d-grid">
                 <button class="btn btn-primary">Buscar</button>
@@ -27,7 +36,7 @@
             <div class="row g-2 mb-2">
                 <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Nombre" required></div>
                 <div class="col-md-4">
-                    <input type="email" name="email" class="form-control" placeholder="Email" pattern="^[^@\s]+@aossas\.com$" required>
+                    <input type="email" name="email" class="form-control" placeholder="Email" pattern="^[^@\s]+@aossas\.com$" title="Solo se permite @aossas.com" required>
                 </div>
                 <div class="col-md-4">
                     <select name="role" class="form-select" required>
@@ -66,7 +75,7 @@
                         <form method="post" action="<?= htmlspecialchars(route_to('admin_user_update')) ?>">
                             <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                             <td><input type="text" name="name" class="form-control form-control-sm" value="<?= htmlspecialchars($u['name']) ?>" required></td>
-                            <td><input type="email" name="email" class="form-control form-control-sm" value="<?= htmlspecialchars($u['email']) ?>" pattern="^[^@\s]+@aossas\.com$" required></td>
+                            <td><input type="email" name="email" class="form-control form-control-sm" value="<?= htmlspecialchars($u['email']) ?>" pattern="^[^@\s]+@aossas\.com$" title="Solo se permite @aossas.com" required></td>
                             <td>
                                 <select name="role" class="form-select form-select-sm" required>
                                     <?php foreach ($roles as $role): ?>
