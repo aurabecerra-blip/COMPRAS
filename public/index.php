@@ -12,7 +12,7 @@ $page = $_GET['page'] ?? ($auth->user() ? 'dashboard' : 'login');
 $authMiddleware = new AuthMiddleware($auth, $flash);
 $trackingController = new TrackingController(new PurchaseRequestRepository($db), $settingsRepo, $flash);
 
-$authController = new AuthController($auth, $flash, $audit);
+$authController = new AuthController($auth, $flash, $audit, $userRepo);
 $dashboardController = new DashboardController($db, $authMiddleware);
 $prController = new PurchaseRequestController(
     new PurchaseRequestRepository($db),
@@ -61,6 +61,15 @@ if ($page === 'login') {
 }
 if ($page === 'do_login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $authController->handleLogin();
+    exit;
+}
+
+if ($page === 'first_use') {
+    $authController->firstUse();
+    exit;
+}
+if ($page === 'do_first_use' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $authController->handleFirstUse();
     exit;
 }
 if ($page === 'logout') {
@@ -144,6 +153,9 @@ switch ($page) {
     case 'admin_settings':
         $adminController->updateSettings();
         break;
+    case 'admin_users':
+        $adminController->users();
+        break;
     case 'admin_notifications':
         $adminController->updateNotifications();
         break;
@@ -158,6 +170,9 @@ switch ($page) {
         break;
     case 'admin_user_store':
         $adminController->storeUser();
+        break;
+    case 'admin_user_update':
+        $adminController->updateUser();
         break;
     default:
         http_response_code(404);

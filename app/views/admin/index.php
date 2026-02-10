@@ -50,31 +50,8 @@ $roles = ['administrador', 'solicitante', 'aprobador', 'compras', 'recepcion'];
             </div>
             <div class="col-md-6">
                 <h4>Usuarios</h4>
-                <table class="table table-sm">
-                    <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($users as $u): ?>
-                        <tr><td><?= htmlspecialchars($u['name']) ?></td><td><?= htmlspecialchars($u['email']) ?></td><td><?= htmlspecialchars($u['role']) ?></td></tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <form method="post" action="<?= htmlspecialchars(route_to('admin_user_store')) ?>">
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Nombre"></div>
-                        <div class="col-md-4"><input type="email" name="email" class="form-control" placeholder="Email"></div>
-                        <div class="col-md-4"><select name="role" class="form-select">
-                            <option value="administrador">Administrador</option>
-                            <option value="solicitante">Solicitante</option>
-                            <option value="aprobador">Aprobador</option>
-                            <option value="compras">Compras</option>
-                            <option value="recepcion">Recepción</option>
-                        </select></div>
-                    </div>
-                    <div class="mb-2">
-                        <input type="password" name="password" class="form-control" placeholder="Contraseña temporal">
-                    </div>
-                    <button class="btn btn-secondary">Crear usuario</button>
-                </form>
+                <p class="text-muted">La administración de usuarios se gestiona desde el módulo dedicado de Configuración → Usuarios.</p>
+                <a class="btn btn-outline-primary" href="<?= htmlspecialchars(route_to('admin_users')) ?>">Ir a usuarios</a>
             </div>
         </div>
     </div>

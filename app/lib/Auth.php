@@ -12,8 +12,9 @@ class Auth
 
     public function attempt(string $email, string $password): bool
     {
-        $stmt = $this->db->pdo()->prepare('SELECT * FROM users WHERE email = ?');
-        $stmt->execute([$email]);
+        $normalizedEmail = strtolower(trim($email));
+        $stmt = $this->db->pdo()->prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1');
+        $stmt->execute([$normalizedEmail]);
         $user = $stmt->fetch();
         if ($user && password_verify($password, $user['password_hash'])) {
             $normalizedRole = strtolower($user['role']);
@@ -26,7 +27,7 @@ class Auth
             $this->flash->add('success', 'Inicio de sesión exitoso');
             return true;
         }
-        $this->flash->add('danger', 'Credenciales inválidas');
+        $this->flash->add('danger', 'Credenciales inválidas o usuario inactivo');
         return false;
     }
 

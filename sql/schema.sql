@@ -4,6 +4,7 @@ CREATE TABLE users (
     email VARCHAR(150) UNIQUE NOT NULL,
     role VARCHAR(50) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL
 );
 
@@ -151,8 +152,6 @@ CREATE TABLE audit_log (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-INSERT INTO users (name, email, role, password_hash, created_at) VALUES
-('Administrador', 'admin@aos.com', 'administrador', '$2y$12$QwXRK91/HPm0QYeCtNJkRezlaA1LAO.qWms4JfEQ7QJfJGMrrY6Mu', NOW());
 
 INSERT INTO settings (`key`, value) VALUES
 ('company_name', 'AOS'),
