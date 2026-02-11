@@ -138,6 +138,9 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
     <div class="card-body">
         <h5>Análisis automático comparativo</h5>
         <p class="text-muted mb-3">Con la información registrada, el sistema calcula los puntajes sin volver a preguntar criterios.</p>
+        <div class="alert alert-info py-2 mb-3">
+            <strong>Regla de negocio:</strong> para cerrar la selección, el proveedor ganador debe alcanzar mínimo <strong>75 puntos</strong>.
+        </div>
 
         <table class="table table-bordered table-sm align-middle">
             <thead>
@@ -184,7 +187,7 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
         </form>
 
         <?php if (!empty($evaluation['pdf_path'])): ?>
-            <a class="btn btn-link mt-2" href="<?= htmlspecialchars(route_to('provider_selection_pdf', ['evaluation_id' => $evaluation['id']])) ?>" target="_blank">Descargar análisis PDF</a>
+            <a class="btn btn-link mt-2" href="<?= htmlspecialchars(route_to('provider_selection_pdf', ['evaluation_id' => $evaluation['id']])) ?>" target="_blank">Descargar PDF de selección</a>
         <?php endif; ?>
     </div>
 </div>

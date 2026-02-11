@@ -139,6 +139,7 @@ class PdfGeneratorService
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $winnerY, 535, 34);
         $this->drawText($stream, 42, $winnerY + 20, 10, 'GANADOR: ' . $winner, true, [0.22, 0.08, 0.19]);
         $this->drawText($stream, 42, $winnerY + 8, 8, 'PROVEEDORES EVALUADOS: ' . implode(', ', array_filter($providerNames)), false, [0.22, 0.08, 0.19]);
+        $this->drawText($stream, 360, $winnerY + 8, 8, 'PUNTAJE MÍNIMO: 75 puntos', true, [0.22, 0.08, 0.19]);
 
         $obsY = $winnerY - 66;
         $stream[] = '0.95 0.97 1.00 rg';
