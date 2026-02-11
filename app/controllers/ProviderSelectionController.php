@@ -99,19 +99,10 @@ class ProviderSelectionController
             $providersById[(int)$provider['id']] = $provider;
         }
 
-        $criteria = [
-            'experiencia' => ['label' => 'Experiencia', 'ponderacion' => 15, 'descripcion' => '<2 años=5 / 2-5 años=10 / >5 años=15'],
-            'forma_pago' => ['label' => 'Forma de Pago', 'ponderacion' => 25, 'descripcion' => 'Contado=10 / Credicontado=20 / Crédito 30+=25 / N/A técnico'],
-            'entrega' => ['label' => 'Condiciones de Entrega', 'ponderacion' => 20, 'descripcion' => '>10=5 / 10=10 / <5=20 / N/A técnico'],
-            'descuento' => ['label' => 'Descuento / Valor Agregado', 'ponderacion' => 5, 'descripcion' => 'Sí=5 / No=0'],
-            'certificaciones' => ['label' => 'Certificaciones', 'ponderacion' => 10, 'descripcion' => '1 cert=5 / 2+ cert=10'],
-            'precios' => ['label' => 'Precios', 'ponderacion' => 25, 'descripcion' => 'Mayor=5 / Igual=15 / Menor=25'],
-        ];
-
         $pdfPath = $this->pdf->generateProviderSelectionPdf([
             'purchase_request' => $pr ?? ['id' => $purchaseRequestId, 'title' => 'N/D'],
             'scores' => $scores,
-            'criteria' => $criteria,
+            'criteria' => $this->selectionCriteria(),
             'winner_name' => $providersById[$winner['winner_provider_id']]['name'] ?? 'N/D',
             'observations' => trim((string)($_POST['observations'] ?? '')),
         ]);
@@ -143,7 +134,23 @@ class ProviderSelectionController
 
         $evaluationId = (int)($_GET['evaluation_id'] ?? 0);
         $evaluation = $this->selections->find($evaluationId);
-        if (!$evaluation || empty($evaluation['pdf_path'])) {
+        if (!$evaluation) {
+            http_response_code(404);
+            echo 'PDF no encontrado';
+            return;
+        }
+
+        if (empty($evaluation['pdf_path']) && ($evaluation['status'] ?? '') === 'CLOSED') {
+            try {
+                $evaluation = $this->regeneratePdf($evaluation);
+            } catch (Throwable $e) {
+                http_response_code(500);
+                echo 'No fue posible regenerar el PDF';
+                return;
+            }
+        }
+
+        if (empty($evaluation['pdf_path'])) {
             http_response_code(404);
             echo 'PDF no encontrado';
             return;
@@ -159,5 +166,56 @@ class ProviderSelectionController
         header('Content-Type: application/pdf');
         header('Content-Disposition: inline; filename="analisis_seleccion_' . $evaluationId . '.pdf"');
         readfile($absolutePath);
+    }
+
+    private function regeneratePdf(array $evaluation): array
+    {
+        $purchaseRequestId = (int)($evaluation['purchase_request_id'] ?? 0);
+        if ($purchaseRequestId <= 0) {
+            throw new RuntimeException('Evaluación inválida');
+        }
+
+        $pr = $this->purchaseRequests->find($purchaseRequestId) ?: ['id' => $purchaseRequestId, 'title' => 'N/D'];
+        $scores = $this->selections->scores((int)$evaluation['id']);
+
+        $allProviders = $this->suppliers->all();
+        $providersById = [];
+        foreach ($allProviders as $provider) {
+            $providersById[(int)$provider['id']] = (string)$provider['name'];
+        }
+
+        $winnerProviderId = (int)($evaluation['winner_provider_id'] ?? 0);
+        $winnerName = $providersById[$winnerProviderId] ?? ((string)($scores[0]['provider_name'] ?? 'N/D'));
+
+        $pdfPath = $this->pdf->generateProviderSelectionPdf([
+            'purchase_request' => $pr,
+            'scores' => $scores,
+            'criteria' => $this->selectionCriteria(),
+            'winner_name' => $winnerName,
+            'observations' => trim((string)($evaluation['observations'] ?? '')),
+        ]);
+
+        $this->selections->updatePdfPath((int)$evaluation['id'], $pdfPath);
+        $evaluation['pdf_path'] = $pdfPath;
+
+        $this->audit->log((int)$this->auth->user()['id'], 'provider_selection_pdf_regenerated', [
+            'purchase_request_id' => $purchaseRequestId,
+            'evaluation_id' => (int)$evaluation['id'],
+            'pdf_path' => $pdfPath,
+        ]);
+
+        return $evaluation;
+    }
+
+    private function selectionCriteria(): array
+    {
+        return [
+            'experiencia' => ['label' => 'Experiencia', 'ponderacion' => 15, 'descripcion' => '<2 años=5 / 2-5 años=10 / >5 años=15'],
+            'forma_pago' => ['label' => 'Forma de Pago', 'ponderacion' => 25, 'descripcion' => 'Contado=10 / Credicontado=20 / Crédito 30+=25 / N/A técnico'],
+            'entrega' => ['label' => 'Condiciones de Entrega', 'ponderacion' => 20, 'descripcion' => '>10=5 / 10=10 / <5=20 / N/A técnico'],
+            'descuento' => ['label' => 'Descuento / Valor Agregado', 'ponderacion' => 5, 'descripcion' => 'Sí=5 / No=0'],
+            'certificaciones' => ['label' => 'Certificaciones', 'ponderacion' => 10, 'descripcion' => '1 cert=5 / 2+ cert=10'],
+            'precios' => ['label' => 'Precios', 'ponderacion' => 25, 'descripcion' => 'Mayor=5 / Igual=15 / Menor=25'],
+        ];
     }
 }

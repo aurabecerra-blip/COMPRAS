@@ -121,4 +121,10 @@ class ProviderSelectionRepository
         $stmt = $this->db->pdo()->prepare('UPDATE provider_selection_evaluations SET observations = ?, updated_at = NOW() WHERE id = ?');
         $stmt->execute([$observations, $evaluationId]);
     }
+
+    public function updatePdfPath(int $evaluationId, string $pdfPath): void
+    {
+        $stmt = $this->db->pdo()->prepare('UPDATE provider_selection_evaluations SET pdf_path = ?, updated_at = NOW() WHERE id = ?');
+        $stmt->execute([$pdfPath, $evaluationId]);
+    }
 }
