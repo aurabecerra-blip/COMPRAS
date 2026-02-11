@@ -160,6 +160,8 @@ $navItems = [
     ['label' => 'Órdenes de compra', 'route' => route_to('purchase_orders'), 'icon' => 'bi-receipt', 'visible' => in_array($role, ['compras', 'recepcion', 'administrador'], true)],
     ['label' => 'Proveedores', 'route' => route_to('suppliers'), 'icon' => 'bi-people', 'visible' => in_array($role, ['compras', 'administrador'], true)],
     ['label' => 'Evaluación proveedores', 'route' => route_to('supplier_evaluations'), 'icon' => 'bi-clipboard-check', 'visible' => in_array($role, ['lider', 'administrador'], true)],
+    ['label' => 'Reevaluación proveedores', 'route' => route_to('reevaluations'), 'icon' => 'bi-clipboard2-pulse', 'visible' => in_array($role, ['lider', 'administrador'], true)],
+    ['label' => 'Selección proveedores', 'route' => route_to('purchase_requests'), 'icon' => 'bi-diagram-3', 'visible' => in_array($role, ['compras', 'lider', 'administrador'], true)],
     ['label' => 'Auditoría', 'route' => route_to('audit'), 'icon' => 'bi-clipboard-data', 'visible' => in_array($role, ['administrador'], true)],
     ['label' => 'Configuración', 'route' => route_to('admin'), 'icon' => 'bi-gear', 'visible' => in_array($role, ['administrador'], true)],
     ['label' => 'Usuarios', 'route' => route_to('admin_users'), 'icon' => 'bi-people-fill', 'visible' => in_array($role, ['administrador'], true)],

@@ -72,6 +72,27 @@ $supplierEvaluationController = new SupplierEvaluationController(
     $auth,
     $authMiddleware
 );
+
+$reevaluationController = new ReevaluationController(
+    new SupplierRepository($db),
+    new ReevaluationRepository($db),
+    new ReevaluationService(),
+    new ModuleMailer(),
+    $flash,
+    $audit,
+    $auth,
+    $authMiddleware
+);
+$supplierSelectionController = new SupplierSelectionController(
+    new PurchaseRequestRepository($db),
+    new SupplierRepository($db),
+    new SupplierSelectionRepository($db),
+    new SupplierSelectionService(),
+    $flash,
+    $audit,
+    $auth,
+    $authMiddleware
+);
 $adminController = new AdminController(
     $settingsRepo,
     $userRepo,
@@ -193,6 +214,22 @@ switch ($page) {
         break;
     case 'provider_selection_pdf':
         $providerSelectionController->pdf();
+        break;
+
+    case 'reevaluations':
+        $reevaluationController->index();
+        break;
+    case 'reevaluation_store':
+        $reevaluationController->store();
+        break;
+    case 'supplier_selection':
+        $supplierSelectionController->index();
+        break;
+    case 'supplier_selection_quote_store':
+        $supplierSelectionController->storeQuotation();
+        break;
+    case 'supplier_selection_decide':
+        $supplierSelectionController->decide();
         break;
     case 'supplier_evaluations':
         $supplierEvaluationController->index();
