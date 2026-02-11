@@ -28,6 +28,7 @@ class ProviderQuoteController
 
         $providers = $this->suppliers->all();
         $quotes = $this->quotes->forPurchaseRequest($purchaseRequestId);
+        $latestQuotesByProvider = $this->quotes->latestQuotesByProvider($purchaseRequestId);
         $files = $this->quotes->filesByPurchaseRequest($purchaseRequestId);
         $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
 
@@ -40,10 +41,16 @@ class ProviderQuoteController
         $this->auth->requireRole(['compras', 'administrador', 'lider']);
 
         $purchaseRequestId = (int)($_POST['purchase_request_id'] ?? 0);
-        $providerId = (int)($_POST['provider_id'] ?? 0);
+        $providerName = trim((string)($_POST['provider_name'] ?? ''));
+        try {
+            $providerId = (int)$this->suppliers->findOrCreateByName($providerName);
+        } catch (Throwable $e) {
+            $this->unprocessable($e->getMessage());
+            return;
+        }
         $isRecotizacion = isset($_POST['recotizacion']) && $_POST['recotizacion'] === '1';
 
-        if ($providerId <= 0 || $purchaseRequestId <= 0) {
+        if ($purchaseRequestId <= 0) {
             $this->unprocessable('Proveedor y solicitud son obligatorios.');
         }
 
@@ -60,6 +67,30 @@ class ProviderQuoteController
             $this->unprocessable('Forma de pago inválida.');
         }
 
+        $experiencia = (string)($_POST['experiencia'] ?? '');
+        if (!in_array($experiencia, ['LT2', '2TO5', 'GT5'], true)) {
+            $this->unprocessable('Experiencia inválida.');
+        }
+
+        $entrega = (string)($_POST['entrega'] ?? '');
+        $entregaNaResult = (string)($_POST['entrega_na_result'] ?? 'NO_CUMPLE');
+        if (!in_array($entrega, ['MAYOR_10', 'IGUAL_10', 'MENOR_5', 'NA'], true)) {
+            $this->unprocessable('Condición de entrega inválida.');
+        }
+        if (!in_array($entregaNaResult, ['CUMPLE', 'NO_CUMPLE'], true)) {
+            $this->unprocessable('Resultado de cronograma inválido.');
+        }
+
+        $descuento = (string)($_POST['descuento'] ?? 'NO');
+        if (!in_array($descuento, ['SI', 'NO'], true)) {
+            $this->unprocessable('Descuento inválido.');
+        }
+
+        $certificaciones = (string)($_POST['certificaciones'] ?? 'NINGUNA');
+        if (!in_array($certificaciones, ['NINGUNA', 'UNA', 'DOS_MAS'], true)) {
+            $this->unprocessable('Certificaciones inválidas.');
+        }
+
         $quoteId = $this->quotes->create($purchaseRequestId, [
             'provider_id' => $providerId,
             'tipo_compra' => $tipoCompra,
@@ -67,12 +98,25 @@ class ProviderQuoteController
             'moneda' => trim((string)($_POST['moneda'] ?? 'COP')) ?: 'COP',
             'plazo_entrega_dias' => (int)($_POST['plazo_entrega_dias'] ?? 0),
             'forma_pago' => $formaPago,
+            'experiencia' => $experiencia,
+            'entrega' => $entrega,
+            'entrega_na_result' => $entregaNaResult,
+            'descuento' => $descuento,
+            'certificaciones' => $certificaciones,
             'recotizacion' => $isRecotizacion,
             'notas' => trim((string)($_POST['notas'] ?? '')),
             'created_by' => (int)$this->auth->user()['id'],
         ]);
 
         $this->storeFiles($purchaseRequestId, $providerId, $quoteId);
+
+        $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
+        $autoScoring = new ProviderSelectionScoringService();
+        $latestQuotes = $this->quotes->latestQuotesByProvider($purchaseRequestId);
+        $scores = $autoScoring->buildScoresFromQuotes($latestQuotes);
+        foreach ($scores as $score) {
+            $this->selections->upsertScore((int)$evaluation['id'], (int)$score['provider_id'], $score, $score['detail'], null);
+        }
 
         $this->audit->log((int)$this->auth->user()['id'], 'provider_quote_create', [
             'purchase_request_id' => $purchaseRequestId,

@@ -28,6 +28,31 @@ class SupplierRepository
         return $stmt->fetch() ?: null;
     }
 
+    public function findByName(string $name): ?array
+    {
+        $stmt = $this->db->pdo()->prepare('SELECT * FROM suppliers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1');
+        $stmt->execute([$name]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public function findOrCreateByName(string $name): int
+    {
+        $cleanName = trim($name);
+        if ($cleanName === '') {
+            throw new InvalidArgumentException('El nombre del proveedor es obligatorio.');
+        }
+
+        $existing = $this->findByName($cleanName);
+        if ($existing) {
+            return (int)$existing['id'];
+        }
+
+        $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, nit, service, contact, email, phone, created_at) VALUES (?, NULL, NULL, NULL, NULL, NULL, NOW())');
+        $stmt->execute([$cleanName]);
+
+        return (int)$this->db->pdo()->lastInsertId();
+    }
+
     public function create(array $data): void
     {
         $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, nit, service, contact, email, phone, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
