@@ -13,6 +13,18 @@ CREATE TABLE settings (
     value VARCHAR(255) NOT NULL
 );
 
+
+CREATE TABLE companies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    nit VARCHAR(50) NOT NULL,
+    logo_path VARCHAR(255) NOT NULL,
+    primary_color VARCHAR(7) NOT NULL DEFAULT '#1E3A8A',
+    secondary_color VARCHAR(7) NOT NULL DEFAULT '#F8C8D8',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
 CREATE TABLE notification_types (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(100) NOT NULL UNIQUE,
@@ -181,11 +193,16 @@ CREATE TABLE audit_log (
 );
 
 
+INSERT INTO companies (name, nit, logo_path, primary_color, secondary_color, created_at, updated_at) VALUES
+('AOS', '900.635.119-8', 'assets/logo_aos.png', '#1E3A8A', '#F8C8D8', NOW(), NOW());
+
 INSERT INTO settings (`key`, value) VALUES
 ('company_name', 'AOS'),
-('brand_logo_path', 'assets/aos-logo.svg'),
-('brand_primary_color', '#0d6efd'),
-('brand_accent_color', '#198754'),
+('company_nit', '900.635.119-8'),
+('brand_logo_path', 'assets/logo_aos.png'),
+('brand_primary_color', '#1E3A8A'),
+('brand_accent_color', '#F8C8D8'),
+('active_company_id', '1'),
 ('form_areas', 'Operaciones,Finanzas,TI,Calidad'),
 ('form_cost_centers', 'CC-001,CC-002,CC-003'),
 ('notifications_enabled', '0'),

@@ -16,25 +16,43 @@ $roles = ['administrador', 'solicitante', 'aprobador', 'compras', 'recepcion'];
     <div class="tab-pane fade <?= $activeTab === 'general' ? 'show active' : '' ?>" id="tab-general">
         <div class="row">
             <div class="col-md-6">
-                <h4>Configuración de marca</h4>
+                <h4>Empresas y marca corporativa</h4>
+                <form method="post" action="<?= htmlspecialchars(route_to('admin_company_switch')) ?>" class="mb-3">
+                    <label class="form-label">Empresa activa</label>
+                    <div class="d-flex gap-2">
+                        <select name="active_company_id" class="form-select">
+                            <?php foreach ($companies as $company): ?>
+                                <option value="<?= (int)$company['id'] ?>" <?= (int)($activeCompany['id'] ?? 0) === (int)$company['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($company['name']) ?> · NIT <?= htmlspecialchars($company['nit']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button class="btn btn-outline-primary">Activar</button>
+                    </div>
+                </form>
                 <form method="post" action="<?= htmlspecialchars(route_to('admin_settings')) ?>" enctype="multipart/form-data">
+                    <input type="hidden" name="company_id" value="<?= (int)($activeCompany['id'] ?? 0) ?>">
                     <div class="mb-2">
-                        <label class="form-label">Nombre de compañía</label>
-                        <input type="text" name="company_name" class="form-control" value="<?= htmlspecialchars($settingsRepo->get('company_name', 'AOS')) ?>">
+                        <label class="form-label">Nombre de la empresa</label>
+                        <input type="text" name="company_name" class="form-control" value="<?= htmlspecialchars($activeCompany['name'] ?? 'AOS') ?>" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">NIT de la empresa</label>
+                        <input type="text" name="company_nit" class="form-control" value="<?= htmlspecialchars($activeCompany['nit'] ?? '900.635.119-8') ?>" required>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Logo (URL o ruta local)</label>
-                        <input type="text" name="brand_logo_path" class="form-control mb-2" value="<?= htmlspecialchars($settingsRepo->get('brand_logo_path', 'assets/aos-logo.svg')) ?>">
-                        <input type="file" name="brand_logo_file" class="form-control" accept="image/*">
+                        <input type="text" name="brand_logo_path" class="form-control mb-2" value="<?= htmlspecialchars($activeCompany['logo_path'] ?? 'assets/logo_aos.png') ?>">
+                        <input type="file" name="brand_logo_file" class="form-control" accept="image/png,image/jpeg,image/svg+xml">
                     </div>
                     <div class="row g-2 mb-2">
                         <div class="col-md-6">
                             <label class="form-label">Color primario</label>
-                            <input type="color" name="brand_primary_color" class="form-control form-control-color" value="<?= htmlspecialchars($settingsRepo->get('brand_primary_color', '#0d6efd')) ?>">
+                            <input type="color" name="brand_primary_color" class="form-control form-control-color" value="<?= htmlspecialchars($activeCompany['primary_color'] ?? '#1E3A8A') ?>">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Color acento</label>
-                            <input type="color" name="brand_accent_color" class="form-control form-control-color" value="<?= htmlspecialchars($settingsRepo->get('brand_accent_color', '#198754')) ?>">
+                            <label class="form-label">Color secundario</label>
+                            <input type="color" name="brand_accent_color" class="form-control form-control-color" value="<?= htmlspecialchars($activeCompany['secondary_color'] ?? '#F8C8D8') ?>">
                         </div>
                     </div>
                     <div class="mb-2">

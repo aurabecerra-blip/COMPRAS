@@ -55,6 +55,7 @@ $flash = new Flash();
 $auth = new Auth($db, $flash);
 $audit = new AuditLogger($db);
 $settingsRepo = new SettingsRepository($db);
+$companyRepo = new CompanyRepository($db, $settingsRepo);
 $userRepo = new UserRepository($db);
 $notificationTypes = new NotificationTypeRepository($db);
 $notificationLogs = new NotificationLogRepository($db);
@@ -72,3 +73,8 @@ if (!function_exists('setting_list')) {
         return $items ?: $fallback;
     }
 }
+
+$GLOBALS['settingsRepo'] = $settingsRepo;
+$GLOBALS['companyRepo'] = $companyRepo;
+$GLOBALS['auth'] = $auth;
+$GLOBALS['flash'] = $flash;

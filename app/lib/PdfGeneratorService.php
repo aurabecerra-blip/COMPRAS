@@ -1,7 +1,7 @@
 <?php
 class PdfGeneratorService
 {
-    public function __construct(private ?SettingsRepository $settings = null)
+    public function __construct(private ?SettingsRepository $settings = null, private ?CompanyRepository $companies = null)
     {
     }
 
@@ -17,6 +17,8 @@ class PdfGeneratorService
         $fullPath = $dir . '/' . $filename;
 
         $branding = $this->brandData();
+        [$primaryR, $primaryG, $primaryB] = $this->hexToRgb($branding['primary_color']);
+        [$secondaryR, $secondaryG, $secondaryB] = $this->hexToRgb($branding['secondary_color']);
         [$logoData, $logoWidth, $logoHeight] = $this->logoJpegData($branding['logo_path']);
 
         $scores = array_values($context['scores'] ?? []);
@@ -56,7 +58,7 @@ class PdfGeneratorService
         $observations = trim((string)($context['observations'] ?? ''));
 
         $stream = [];
-        $stream[] = '0.95 0.96 0.98 rg';
+        $stream[] = '0.96 0.97 1.00 rg';
         $stream[] = '30 730 535 95 re f';
 
         if ($logoData !== '') {
@@ -66,21 +68,21 @@ class PdfGeneratorService
             $stream[] = 'Q';
         }
 
-        $this->drawText($stream, 140, 804, 11, $branding['company_name'], true, [0.11, 0.19, 0.42]);
-        $this->drawText($stream, 140, 788, 9, 'NIT: ' . $branding['company_nit'], false, [0.20, 0.24, 0.32]);
-        $this->drawCenteredText($stream, 300, 770, 13, 'ANÁLISIS DE SELECCIÓN DE PROVEEDORES', true, [0.11, 0.19, 0.42]);
-        $this->drawText($stream, 430, 804, 9, 'Versión: 02', false, [0.20, 0.24, 0.32]);
-        $this->drawText($stream, 430, 790, 9, 'Fecha: ' . date('d/m/Y'), false, [0.20, 0.24, 0.32]);
-        $this->drawText($stream, 430, 776, 9, 'Solicitud (PR): #' . $prId, false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 140, 805, 11, $branding['company_name'], true, [$primaryR, $primaryG, $primaryB]);
+        $this->drawText($stream, 140, 790, 9, 'NIT: ' . $branding['company_nit'], false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 805, 9, 'Versión: 02', false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 792, 9, 'Fecha: ' . date('d/m/Y'), false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 779, 9, 'Solicitud (PR): #' . $prId, false, [0.20, 0.24, 0.32]);
+        $this->drawCenteredText($stream, 300, 758, 13, 'ANÁLISIS DE SELECCIÓN DE PROVEEDORES', true, [$primaryR, $primaryG, $primaryB]);
 
         $tableX = 30;
         $tableTop = 708;
         $headerHeight = 26;
         $rowHeight = 24;
         $columns = [120, 67, 67, 67, 80, 134];
-        $headers = ['CRITERIO', 'PROVEEDOR 1', 'PROVEEDOR 2', 'PROVEEDOR 3', 'PONDERACIÓN (%)', 'DESCRIPCIÓN / ESCALA'];
+        $headers = ['CRITERIO', strtoupper($providerNames[0] ?: 'PROVEEDOR A'), strtoupper($providerNames[1] ?: 'PROVEEDOR B'), strtoupper($providerNames[2] ?: 'PROVEEDOR C'), 'PONDERACIÓN (%)', 'DESCRIPCIÓN / ESCALA'];
 
-        $stream[] = '0.11 0.19 0.42 rg';
+        $stream[] = sprintf('%.3f %.3f %.3f rg', $primaryR, $primaryG, $primaryB);
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $tableTop - $headerHeight, array_sum($columns), $headerHeight);
 
         $cursorX = $tableX;
@@ -113,7 +115,7 @@ class PdfGeneratorService
         }
 
         $y -= $rowHeight;
-        $stream[] = '0.08 0.15 0.34 rg';
+        $stream[] = sprintf('%.3f %.3f %.3f rg', $primaryR, $primaryG, $primaryB);
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $y, array_sum($columns), $rowHeight);
         $cx = $tableX;
         $totalCells = ['TOTAL PUNTAJE', $totals[0], $totals[1], $totals[2], '100', 'Suma automática'];
@@ -133,10 +135,10 @@ class PdfGeneratorService
         }
 
         $winnerY = $gridBottom - 52;
-        $stream[] = '0.95 0.69 0.79 rg';
+        $stream[] = sprintf('%.3f %.3f %.3f rg', $secondaryR, $secondaryG, $secondaryB);
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $winnerY, 535, 34);
-        $this->drawText($stream, 42, $winnerY + 20, 10, 'GANADOR: ' . $winner, true, [0.38, 0.07, 0.24]);
-        $this->drawText($stream, 42, $winnerY + 8, 8, 'PROVEEDORES EVALUADOS: ' . implode(' | ', $providerNames), false, [0.38, 0.07, 0.24]);
+        $this->drawText($stream, 42, $winnerY + 20, 10, 'GANADOR: ' . $winner, true, [0.22, 0.08, 0.19]);
+        $this->drawText($stream, 42, $winnerY + 8, 8, 'PROVEEDORES EVALUADOS: ' . implode(', ', array_filter($providerNames)), false, [0.22, 0.08, 0.19]);
 
         $obsY = $winnerY - 66;
         $stream[] = '0.95 0.97 1.00 rg';
@@ -152,14 +154,28 @@ class PdfGeneratorService
 
     private function brandData(): array
     {
-        $company = $this->settings?->get('company_name', 'AOS') ?? 'AOS';
-        $nit = $this->settings?->get('company_nit', '900.000.000-0') ?? '900.000.000-0';
-        $logoPath = $this->settings?->get('brand_logo_path', 'assets/logo_aos.png') ?? 'assets/logo_aos.png';
+        $activeCompany = $this->companies?->active() ?? [];
 
         return [
-            'company_name' => trim($company) !== '' ? trim($company) : 'AOS',
-            'company_nit' => trim($nit) !== '' ? trim($nit) : '900.000.000-0',
-            'logo_path' => trim($logoPath) !== '' ? trim($logoPath) : 'assets/logo_aos.png',
+            'company_name' => trim((string)($activeCompany['name'] ?? ($this->settings?->get('company_name', 'AOS') ?? 'AOS'))) ?: 'AOS',
+            'company_nit' => trim((string)($activeCompany['nit'] ?? ($this->settings?->get('company_nit', '900.635.119-8') ?? '900.635.119-8'))) ?: '900.635.119-8',
+            'logo_path' => trim((string)($activeCompany['logo_path'] ?? ($this->settings?->get('brand_logo_path', 'assets/logo_aos.png') ?? 'assets/logo_aos.png'))) ?: 'assets/logo_aos.png',
+            'primary_color' => trim((string)($activeCompany['primary_color'] ?? ($this->settings?->get('brand_primary_color', '#1E3A8A') ?? '#1E3A8A'))) ?: '#1E3A8A',
+            'secondary_color' => trim((string)($activeCompany['secondary_color'] ?? ($this->settings?->get('brand_accent_color', '#F8C8D8') ?? '#F8C8D8'))) ?: '#F8C8D8',
+        ];
+    }
+
+    private function hexToRgb(string $hex): array
+    {
+        $hex = ltrim(trim($hex), '#');
+        if (strlen($hex) !== 6) {
+            return [0.12, 0.23, 0.54];
+        }
+
+        return [
+            hexdec(substr($hex, 0, 2)) / 255,
+            hexdec(substr($hex, 2, 2)) / 255,
+            hexdec(substr($hex, 4, 2)) / 255,
         ];
     }
 
