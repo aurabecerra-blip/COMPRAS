@@ -64,30 +64,42 @@ class ProviderSelectionScoringService
         $top = $scores[0];
         $tied = array_values(array_filter($scores, fn($row) => (int)$row['total_score'] === (int)$top['total_score']));
 
+        $automaticWinnerProviderId = (int)$top['provider_id'];
+        $automaticReason = null;
+
         if (count($tied) === 1) {
-            return ['winner_provider_id' => (int)$top['provider_id'], 'tie_break_reason' => null];
+            $automaticReason = 'Proveedor seleccionado automáticamente por mayor puntaje en evaluación.';
+        } else {
+            usort($tied, fn($a, $b) => (int)$b['precios_score'] <=> (int)$a['precios_score']);
+            if ((int)$tied[0]['precios_score'] > (int)$tied[1]['precios_score']) {
+                $automaticWinnerProviderId = (int)$tied[0]['provider_id'];
+                $automaticReason = 'Empate en puntaje total, definido por mayor puntaje en criterio Precios.';
+            } elseif ($manualWinnerProviderId <= 0 || $manualReason === '') {
+                throw new InvalidArgumentException('Empate total y en precios: debes seleccionar manualmente el ganador con justificación.');
+            }
         }
 
-        usort($tied, fn($a, $b) => (int)$b['precios_score'] <=> (int)$a['precios_score']);
-        if ((int)$tied[0]['precios_score'] > (int)$tied[1]['precios_score']) {
-            return [
-                'winner_provider_id' => (int)$tied[0]['provider_id'],
-                'tie_break_reason' => 'Empate en puntaje total, definido por mayor puntaje en criterio Precios.',
-            ];
-        }
+        if ($manualWinnerProviderId > 0) {
+            $found = array_values(array_filter($scores, fn($row) => (int)$row['provider_id'] === $manualWinnerProviderId));
+            if (!$found) {
+                throw new InvalidArgumentException('El proveedor ganador manual no está en la evaluación.');
+            }
 
-        if ($manualWinnerProviderId <= 0 || $manualReason === '') {
-            throw new InvalidArgumentException('Empate total y en precios: debes seleccionar manualmente el ganador con justificación.');
-        }
+            if ($manualWinnerProviderId !== $automaticWinnerProviderId && $manualReason === '') {
+                throw new InvalidArgumentException('Si seleccionas un ganador diferente al automático, debes registrar la observación de justificación.');
+            }
 
-        $found = array_values(array_filter($scores, fn($row) => (int)$row['provider_id'] === $manualWinnerProviderId));
-        if (!$found) {
-            throw new InvalidArgumentException('El proveedor ganador manual no está en la evaluación.');
+            if ($manualWinnerProviderId !== $automaticWinnerProviderId) {
+                return [
+                    'winner_provider_id' => $manualWinnerProviderId,
+                    'tie_break_reason' => $manualReason,
+                ];
+            }
         }
 
         return [
-            'winner_provider_id' => $manualWinnerProviderId,
-            'tie_break_reason' => $manualReason,
+            'winner_provider_id' => $automaticWinnerProviderId,
+            'tie_break_reason' => $automaticReason,
         ];
     }
 

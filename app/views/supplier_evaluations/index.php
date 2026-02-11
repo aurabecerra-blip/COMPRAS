@@ -13,7 +13,7 @@ if ($showId > 0) {
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
-        <p class="text-uppercase text-muted small mb-1">Módulo ISO · Evaluación / Reevaluación</p>
+        <p class="text-uppercase text-muted small mb-1">Módulo ISO · Evaluación de proveedores</p>
         <h3 class="mb-0">Evaluación de proveedores</h3>
         <p class="text-muted mb-0">Registro histórico por proveedor y fecha con cálculo ponderado automático.</p>
     </div>
@@ -164,7 +164,7 @@ if ($showId > 0) {
                                     <td><span class="badge bg-secondary-subtle text-dark"><?= htmlspecialchars($evaluation['status_label']) ?></span></td>
                                     <td>
                                         <?php if (!empty($evaluation['pdf_path'])): ?>
-                                            <a href="<?= htmlspecialchars($evaluation['pdf_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver PDF</a>
+                                            <a href="<?= htmlspecialchars(base_url($evaluation['pdf_path'])) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver PDF</a>
                                         <?php else: ?>
                                             <span class="text-muted small">N/D</span>
                                         <?php endif; ?>
@@ -194,7 +194,7 @@ if ($showId > 0) {
             </div>
             <p class="mb-0 mt-2"><strong>Observaciones:</strong> <?= htmlspecialchars($selectedEvaluation['observations'] ?: 'Sin observaciones') ?></p>
             <?php if (!empty($selectedEvaluation['pdf_path'])): ?>
-                <a href="<?= htmlspecialchars($selectedEvaluation['pdf_path']) ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-3">
+                <a href="<?= htmlspecialchars(base_url($selectedEvaluation['pdf_path'])) ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-3">
                     <i class="bi bi-file-earmark-pdf"></i> Descargar PDF de evaluación
                 </a>
             <?php endif; ?>
