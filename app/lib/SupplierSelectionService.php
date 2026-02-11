@@ -103,21 +103,34 @@ class SupplierSelectionService
     public function buildActPdf(array $context): string
     {
         $prId = (int)$context['purchase_request']['id'];
-        $dir = __DIR__ . '/../../public/storage/actas_seleccion/' . $prId;
+        $dir = __DIR__ . '/../../public/storage/selection-evaluations/' . $prId;
         if (!is_dir($dir)) {
             mkdir($dir, 0775, true);
         }
 
-        $filename = 'acta_seleccion_' . date('Ymd_His') . '.pdf';
+        $filename = 'evaluacion_seleccion_' . date('Ymd_His') . '.pdf';
         $fullPath = $dir . '/' . $filename;
 
         $lines = [
-            'ACTA DE SELECCION DE PROVEEDOR',
+            'ACTA DE EVALUACION DE SELECCION DE PROVEEDOR',
             'Solicitud: #' . $prId . ' - ' . ($context['purchase_request']['title'] ?? ''),
+            'Area: ' . ($context['purchase_request']['area'] ?? 'N/D'),
+            'Justificacion: ' . ($context['purchase_request']['justification'] ?? 'N/D'),
             'Fecha: ' . date('Y-m-d H:i:s'),
             '',
-            'Participantes y puntajes:',
+            'Cotizaciones registradas:',
         ];
+
+        foreach (($context['quotations'] ?? []) as $quotation) {
+            $lines[] = '- ' . ($quotation['supplier_name'] ?? ('Proveedor #' . $quotation['supplier_id']))
+                . ' | Numero: ' . ($quotation['quote_number'] ?? 'N/A')
+                . ' | Fecha: ' . ($quotation['quotation_date'] ?? 'N/D')
+                . ' | Total: ' . ($quotation['currency'] ?? 'COP') . ' ' . number_format((float)($quotation['total_value'] ?? 0), 2);
+        }
+
+        $lines[] = '';
+        $lines[] = 'Puntuaciones detalladas:';
+        $lines[] = 'Criterios: Precio(40), Entrega(25), Pago(15), Garantia(10), Tecnico(10).';
 
         foreach ($context['scores'] as $score) {
             $lines[] = '- ' . ($score['supplier_name'] ?? ('Proveedor #' . $score['supplier_id']))
@@ -125,29 +138,54 @@ class SupplierSelectionService
                 . ' (Precio ' . $score['price_score']
                 . ', Entrega ' . $score['delivery_score']
                 . ', Pago ' . $score['payment_score']
-                . ', Garantía ' . $score['warranty_score']
-                . ', Técnico ' . $score['technical_score'] . ')';
+                . ', Garantia ' . $score['warranty_score']
+                . ', Tecnico ' . $score['technical_score'] . ')';
         }
 
         $lines[] = '';
-        $lines[] = 'Ganador: ' . ($context['winner_name'] ?? 'N/D');
-        $lines[] = 'Justificación: ' . ($context['winner_justification'] ?? 'N/D');
+        $lines[] = 'Proveedor seleccionado: ' . ($context['winner_name'] ?? 'N/D');
+        $lines[] = 'Justificacion: ' . ($context['winner_justification'] ?? 'N/D');
         $lines[] = 'Observaciones: ' . (($context['observations'] ?? '') !== '' ? $context['observations'] : 'Sin observaciones');
 
-        $stream = "BT\n/F1 10 Tf\n40 800 Td\n";
+        $stream = "BT
+/F1 10 Tf
+40 800 Td
+";
         foreach ($lines as $i => $line) {
             $escaped = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], trim($line));
-            $stream .= ($i === 0 ? "($escaped) Tj\n" : "0 -14 Td\n($escaped) Tj\n");
+            $stream .= ($i === 0 ? "($escaped) Tj
+" : "0 -14 Td
+($escaped) Tj
+");
         }
         $stream .= "ET";
 
-        $pdf = "%PDF-1.4\n";
+        $pdf = "%PDF-1.4
+";
         $objs = [
-            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-            "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
-            "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-            "5 0 obj\n<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream\nendobj\n",
+            "1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+",
+            "2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+",
+            "3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+",
+            "4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+",
+            "5 0 obj
+<< /Length " . strlen($stream) . " >>
+stream
+" . $stream . "
+endstream
+endobj
+",
         ];
 
         $offsets = [0];
@@ -156,14 +194,22 @@ class SupplierSelectionService
             $pdf .= $obj;
         }
         $xref = strlen($pdf);
-        $pdf .= "xref\n0 " . (count($objs) + 1) . "\n0000000000 65535 f \n";
+        $pdf .= "xref
+0 " . (count($objs) + 1) . "
+0000000000 65535 f 
+";
         for ($i = 1; $i <= count($objs); $i++) {
-            $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
+            $pdf .= sprintf("%010d 00000 n 
+", $offsets[$i]);
         }
-        $pdf .= "trailer\n<< /Size " . (count($objs) + 1) . " /Root 1 0 R >>\nstartxref\n" . $xref . "\n%%EOF";
+        $pdf .= "trailer
+<< /Size " . (count($objs) + 1) . " /Root 1 0 R >>
+startxref
+" . $xref . "
+%%EOF";
 
         file_put_contents($fullPath, $pdf);
-        return '/storage/actas_seleccion/' . $prId . '/' . $filename;
+        return '/storage/selection-evaluations/' . $prId . '/' . $filename;
     }
 
     private function paymentScore(string $paymentTerms): float

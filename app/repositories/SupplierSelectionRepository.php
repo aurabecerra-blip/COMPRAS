@@ -32,17 +32,24 @@ class SupplierSelectionRepository
             WHERE q.selection_process_id = ?
             ORDER BY q.total_value ASC');
         $stmt->execute([$processId]);
-        return $stmt->fetchAll();
+        $rows = $stmt->fetchAll();
+        foreach ($rows as &$row) {
+            $row['files'] = $this->filesByQuotation((int)$row['id']);
+        }
+        unset($row);
+        return $rows;
     }
 
     public function addQuotation(int $processId, array $data): int
     {
         $stmt = $this->db->pdo()->prepare('INSERT INTO supplier_quotations
-            (selection_process_id, supplier_id, quotation_date, total_value, currency, delivery_term_days, payment_terms, warranty, technical_compliance, observations, evidence_file_path, evidence_original_name, mime_type, file_size, uploaded_by, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())');
+            (selection_process_id, purchase_request_id, supplier_id, quote_number, quotation_date, total_value, currency, delivery_term_days, payment_terms, warranty, technical_compliance, observations, evidence_file_path, evidence_original_name, mime_type, file_size, uploaded_by, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())');
         $stmt->execute([
             $processId,
+            $data['purchase_request_id'],
             $data['supplier_id'],
+            $data['quote_number'] ?? null,
             $data['quotation_date'],
             $data['total_value'],
             $data['currency'] ?? 'COP',
@@ -58,6 +65,28 @@ class SupplierSelectionRepository
             $data['uploaded_by'],
         ]);
         return (int)$this->db->pdo()->lastInsertId();
+    }
+
+    public function addQuotationFile(int $quotationId, array $data): void
+    {
+        $stmt = $this->db->pdo()->prepare('INSERT INTO supplier_quotation_files
+            (quotation_id, file_path, original_name, mime_type, file_size, uploaded_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, NOW())');
+        $stmt->execute([
+            $quotationId,
+            $data['file_path'],
+            $data['original_name'],
+            $data['mime_type'] ?? null,
+            $data['file_size'] ?? null,
+            $data['uploaded_by'],
+        ]);
+    }
+
+    public function filesByQuotation(int $quotationId): array
+    {
+        $stmt = $this->db->pdo()->prepare('SELECT * FROM supplier_quotation_files WHERE quotation_id = ? ORDER BY created_at ASC');
+        $stmt->execute([$quotationId]);
+        return $stmt->fetchAll();
     }
 
     public function replaceScores(int $processId, array $scores): void
