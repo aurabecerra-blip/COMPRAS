@@ -1,6 +1,8 @@
 <?php
 class SupplierEvaluationCalculator
 {
+    public const MIN_PASSING_SCORE = 80;
+
     public const CRITERIA = [
         'delivery_time' => [
             'name' => 'Cumple con los tiempos de entrega',
@@ -127,12 +129,8 @@ class SupplierEvaluationCalculator
 
     public function statusFromScore(int $score): string
     {
-        if ($score >= 80) {
+        if ($score >= self::MIN_PASSING_SCORE) {
             return 'Aprobado';
-        }
-
-        if ($score >= 60) {
-            return 'Condicional';
         }
 
         return 'No aprobado';

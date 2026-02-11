@@ -16,6 +16,7 @@ if ($showId > 0) {
         <p class="text-uppercase text-muted small mb-1">Módulo ISO · Evaluación de proveedores</p>
         <h3 class="mb-0">Evaluación de proveedores</h3>
         <p class="text-muted mb-0">Registro histórico por proveedor y fecha con cálculo ponderado automático.</p>
+        <p class="text-muted mb-0 small">Puntaje mínimo para aprobar: <strong>80%</strong>.</p>
     </div>
 </div>
 

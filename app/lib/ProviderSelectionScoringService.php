@@ -1,6 +1,8 @@
 <?php
 class ProviderSelectionScoringService
 {
+    public const MIN_WINNER_SCORE = 75;
+
     public function criteriaTemplate(): array
     {
         return [
@@ -121,12 +123,22 @@ class ProviderSelectionScoringService
                 throw new InvalidArgumentException('Si seleccionas un ganador diferente al automático, debes registrar la observación de justificación.');
             }
 
+            $winnerScore = (int)($found[0]['total_score'] ?? 0);
+            if ($winnerScore < self::MIN_WINNER_SCORE) {
+                throw new InvalidArgumentException('No se puede seleccionar proveedor: el puntaje mínimo requerido es de 75 puntos.');
+            }
+
             if ($manualWinnerProviderId !== $automaticWinnerProviderId) {
                 return [
                     'winner_provider_id' => $manualWinnerProviderId,
                     'tie_break_reason' => $manualReason,
                 ];
             }
+        }
+
+        $automaticScore = (int)($top['total_score'] ?? 0);
+        if ($automaticScore < self::MIN_WINNER_SCORE) {
+            throw new InvalidArgumentException('No se puede seleccionar proveedor: el puntaje mínimo requerido es de 75 puntos.');
         }
 
         return [
