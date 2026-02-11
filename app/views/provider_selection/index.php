@@ -186,7 +186,7 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
             <button class="btn btn-success mt-3">Cerrar y seleccionar ganador</button>
         </form>
 
-        <?php if (!empty($evaluation['pdf_path'])): ?>
+        <?php if (!empty($evaluation['pdf_path']) || (($evaluation['status'] ?? '') === 'CLOSED')): ?>
             <a class="btn btn-link mt-2" href="<?= htmlspecialchars(route_to('provider_selection_pdf', ['evaluation_id' => $evaluation['id']])) ?>" target="_blank">Descargar PDF de selección</a>
         <?php endif; ?>
     </div>
