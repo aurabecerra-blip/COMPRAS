@@ -231,6 +231,9 @@ switch ($page) {
     case 'supplier_selection_decide':
         $supplierSelectionController->decide();
         break;
+    case 'supplier_selection_pdf':
+        $supplierSelectionController->pdf();
+        break;
     case 'supplier_evaluations':
         $supplierEvaluationController->index();
         break;

@@ -1,7 +1,7 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Módulo B · Evaluación de Selección de Proveedor</h4>
-    <span class="badge bg-secondary">Estado: <?= htmlspecialchars($process['status']) ?></span>
+    <span class="badge bg-secondary">Estado: <?= htmlspecialchars(($process['status'] ?? 'BORRADOR') === 'FINALIZADA' ? 'Finalizada' : 'Borrador') ?></span>
 </div>
 <div class="row g-4">
     <div class="col-lg-5">
@@ -20,6 +20,10 @@
                         </select>
                     </div>
                     <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label">N° Cotización (opcional)</label>
+                            <input class="form-control" type="text" name="quote_number" maxlength="80" placeholder="Ej: COT-2026-001">
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Fecha</label>
                             <input class="form-control" type="date" name="quotation_date" value="<?= date('Y-m-d') ?>" required>
@@ -54,8 +58,8 @@
                         </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label">Archivo cotización (PDF/imagen/Excel, máx 10MB)</label>
-                        <input class="form-control" type="file" name="evidence_file" required>
+                        <label class="form-label">Archivos cotización (PDF/imagen/Excel, máx 10MB c/u)</label>
+                        <input class="form-control" type="file" name="evidence_files[]" multiple required>
                     </div>
                     <button class="btn btn-primary" type="submit">Guardar cotización</button>
                 </form>
@@ -69,17 +73,27 @@
                 <small class="text-muted">Requisito de cierre: mínimo 3 cotizaciones de 3 proveedores diferentes.</small>
                 <div class="table-responsive mt-2">
                     <table class="table table-sm align-middle">
-                        <thead><tr><th>Proveedor</th><th>Valor</th><th>Entrega</th><th>Pago</th><th>Garantía</th><th>Técnico</th><th>Evidencia</th></tr></thead>
+                        <thead><tr><th>Proveedor</th><th>N°</th><th>Fecha</th><th>Valor</th><th>Entrega</th><th>Pago</th><th>Garantía</th><th>Técnico</th><th>Evidencias</th></tr></thead>
                         <tbody>
                         <?php foreach ($quotations as $q): ?>
                             <tr>
                                 <td><?= htmlspecialchars($q['supplier_name']) ?></td>
+                                <td><?= htmlspecialchars($q['quote_number'] ?? 'N/A') ?></td>
+                                <td><?= htmlspecialchars($q['quotation_date']) ?></td>
                                 <td><?= htmlspecialchars($q['currency']) ?> <?= number_format((float)$q['total_value'], 2) ?></td>
                                 <td><?= (int)$q['delivery_term_days'] ?> días</td>
                                 <td><?= htmlspecialchars($q['payment_terms']) ?></td>
                                 <td><?= htmlspecialchars($q['warranty']) ?></td>
                                 <td><?= htmlspecialchars($q['technical_compliance']) ?></td>
-                                <td><a target="_blank" href="<?= htmlspecialchars(asset_url($q['evidence_file_path'])) ?>">Ver</a></td>
+                                <td>
+                                    <?php if (!empty($q['files'])): ?>
+                                        <?php foreach ($q['files'] as $file): ?>
+                                            <div><a target="_blank" href="<?= htmlspecialchars(asset_url($file['file_path'])) ?>"><?= htmlspecialchars($file['original_name']) ?></a></div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <a target="_blank" href="<?= htmlspecialchars(asset_url($q['evidence_file_path'])) ?>">Ver</a>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -138,7 +152,7 @@
                     <button class="btn btn-success" type="submit">Generar acta y seleccionar proveedor</button>
                 </form>
                 <?php if (!empty($process['selection_pdf_path'])): ?>
-                    <a class="btn btn-outline-primary btn-sm mt-2" target="_blank" href="<?= htmlspecialchars(asset_url($process['selection_pdf_path'])) ?>">Descargar acta PDF</a>
+                    <a class="btn btn-outline-primary btn-sm mt-2" target="_blank" href="<?= htmlspecialchars(route_to('supplier_selection_pdf', ['id' => $pr['id']])) ?>">Ver PDF de evaluación</a>
                 <?php endif; ?>
             </div>
         </div>
