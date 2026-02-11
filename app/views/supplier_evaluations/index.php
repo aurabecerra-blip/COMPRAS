@@ -69,7 +69,7 @@ if ($showId > 0) {
                         <select name="after_sales" class="form-select" required>
                             <option value="">Seleccionar...</option>
                             <option value="full">Cumple oportunamente con todas las garantías y soporte técnico (10)</option>
-                            <option value="partial">Cumple parcialmente con las garantías y soporte técnico (0)</option>
+                            <option value="partial">Cumple parcialmente con las garantías y soporte técnico (5)</option>
                             <option value="none">No cumple con las garantías ni brinda soluciones (0)</option>
                         </select>
                     </div>

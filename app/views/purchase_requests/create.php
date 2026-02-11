@@ -25,12 +25,12 @@ $areaOptions = setting_list($settingsRepo, 'form_areas', ['Operaciones', 'Finanz
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Área</label>
-                        <input list="areaOptions" type="text" name="area" class="form-control" placeholder="Selecciona o escribe" required>
-                        <datalist id="areaOptions">
+                        <select name="area" class="form-select" required>
+                            <option value="" selected disabled>Selecciona un área</option>
                             <?php foreach ($areaOptions as $option): ?>
-                                <option value="<?= htmlspecialchars($option) ?>"></option>
+                                <option value="<?= htmlspecialchars($option) ?>"><?= htmlspecialchars($option) ?></option>
                             <?php endforeach; ?>
-                        </datalist>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Descripción</label>

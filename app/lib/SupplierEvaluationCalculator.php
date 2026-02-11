@@ -25,7 +25,7 @@ class SupplierEvaluationCalculator
             'type' => 'choice',
             'options' => [
                 'full' => ['label' => 'Cumple oportunamente con todas las garantías y soporte técnico', 'score' => 10],
-                'partial' => ['label' => 'Cumple parcialmente con las garantías y soporte técnico', 'score' => 0],
+                'partial' => ['label' => 'Cumple parcialmente con las garantías y soporte técnico', 'score' => 5],
                 'none' => ['label' => 'No cumple con las garantías ni brinda soluciones', 'score' => 0],
             ],
         ],

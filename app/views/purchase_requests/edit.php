@@ -8,6 +8,10 @@ $statuses = [
     'CANCELADA' => ['label' => 'Cancelada', 'icon' => 'bi-slash-circle', 'color' => 'dark'],
 ];
 $steps = ['BORRADOR', 'ENVIADA', 'APROBADA'];
+$currentArea = (string)($pr['area'] ?? '');
+if ($currentArea !== '' && !in_array($currentArea, $areaOptions, true)) {
+    $areaOptions[] = $currentArea;
+}
 ?>
 <?php include __DIR__ . '/../layout/header.php'; ?>
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
@@ -56,12 +60,12 @@ $steps = ['BORRADOR', 'ENVIADA', 'APROBADA'];
             </div>
             <div class="mb-3">
                 <label class="form-label">Área</label>
-                <input list="areaOptions" type="text" name="area" class="form-control" value="<?= htmlspecialchars($pr['area']) ?>" required>
-                <datalist id="areaOptions">
+                <select name="area" class="form-select" required>
+                    <option value="" disabled <?= $currentArea === '' ? 'selected' : '' ?>>Selecciona un área</option>
                     <?php foreach ($areaOptions as $option): ?>
-                        <option value="<?= htmlspecialchars($option) ?>"></option>
+                        <option value="<?= htmlspecialchars($option) ?>" <?= $currentArea === $option ? 'selected' : '' ?>><?= htmlspecialchars($option) ?></option>
                     <?php endforeach; ?>
-                </datalist>
+                </select>
             </div>
             <div class="mb-3">
                 <label class="form-label">Descripción</label>

@@ -1,6 +1,10 @@
 <?php
 class SupplierSelectionService
 {
+    public function __construct(private ?SettingsRepository $settings = null, private ?CompanyRepository $companies = null)
+    {
+    }
+
     public function criteria(): array
     {
         return [
@@ -224,21 +228,40 @@ class SupplierSelectionService
                 . ' | Certificaciones: ' . (($quotation['archivo_certificaciones_url'] ?? '') !== '' ? $quotation['archivo_certificaciones_url'] : 'N/A');
         }
 
-        $stream = "BT\n/F1 9 Tf\n40 800 Td\n";
+        [$logoData, $logoWidth, $logoHeight] = $this->logoJpegData();
+
+        $stream = [];
+        if ($logoData !== '') {
+            $stream[] = 'q';
+            $stream[] = '90 0 0 36 40 790 cm';
+            $stream[] = '/Im1 Do';
+            $stream[] = 'Q';
+        }
+
+        $stream[] = 'BT';
+        $stream[] = '/F1 9 Tf';
+        $stream[] = '40 760 Td';
         foreach ($lines as $i => $line) {
             $escaped = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], trim($line));
-            $stream .= ($i === 0 ? "($escaped) Tj\n" : "0 -12 Td\n($escaped) Tj\n");
+            $stream[] = $i === 0 ? "($escaped) Tj" : "0 -12 Td ($escaped) Tj";
         }
-        $stream .= "ET";
+        $stream[] = 'ET';
+        $streamContent = implode("\n", $stream);
 
         $pdf = "%PDF-1.4\n";
         $objects = [
             "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
             "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >>"
+                . ($logoData !== '' ? " /XObject << /Im1 6 0 R >>" : '')
+                . " >> /Contents 5 0 R >>\nendobj\n",
             "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-            "5 0 obj\n<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream\nendobj\n",
+            "5 0 obj\n<< /Length " . strlen($streamContent) . " >>\nstream\n" . $streamContent . "\nendstream\nendobj\n",
         ];
+
+        if ($logoData !== '') {
+            $objects[] = "6 0 obj\n<< /Type /XObject /Subtype /Image /Width {$logoWidth} /Height {$logoHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($logoData) . " >>\nstream\n" . $logoData . "\nendstream\nendobj\n";
+        }
 
         $offsets = [0];
         foreach ($objects as $object) {
@@ -322,6 +345,55 @@ class SupplierSelectionService
             return 4.0;
         }
         return 0.0;
+    }
+
+    private function logoJpegData(): array
+    {
+        $activeCompany = $this->companies?->active() ?? [];
+        $logoSettingPath = trim((string)($activeCompany['logo_path'] ?? ($this->settings?->get('brand_logo_path', 'assets/logo_aos.png') ?? 'assets/logo_aos.png'))) ?: 'assets/logo_aos.png';
+
+        $candidates = [];
+        $normalized = ltrim($logoSettingPath, '/');
+        $candidates[] = __DIR__ . '/../../public/' . $normalized;
+        $candidates[] = __DIR__ . '/../../' . $normalized;
+        $candidates[] = __DIR__ . '/../../assets/logo_aos.png';
+
+        $logoPath = '';
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                $logoPath = $candidate;
+                break;
+            }
+        }
+
+        if ($logoPath === '' || !function_exists('imagecreatefromstring')) {
+            return ['', 1, 1];
+        }
+
+        $raw = file_get_contents($logoPath);
+        if ($raw === false) {
+            return ['', 1, 1];
+        }
+
+        $image = @imagecreatefromstring($raw);
+        if (!$image || !function_exists('imagejpeg') || !function_exists('imagesx') || !function_exists('imagesy')) {
+            if ($image && function_exists('imagedestroy')) {
+                imagedestroy($image);
+            }
+            return ['', 1, 1];
+        }
+
+        ob_start();
+        imagejpeg($image, null, 90);
+        $jpegData = ob_get_clean() ?: '';
+        $width = max(1, imagesx($image));
+        $height = max(1, imagesy($image));
+
+        if (function_exists('imagedestroy')) {
+            imagedestroy($image);
+        }
+
+        return [$jpegData, $width, $height];
     }
 
     private function certificationScore(array $quotation): float
