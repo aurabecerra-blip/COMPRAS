@@ -23,8 +23,8 @@ class ProviderQuoteRepository
     {
         $stmt = $this->db->pdo()->prepare(
             'INSERT INTO provider_quotes
-            (purchase_request_id, provider_id, tipo_compra, valor, moneda, plazo_entrega_dias, forma_pago, recotizacion, notas, created_by, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+            (purchase_request_id, provider_id, tipo_compra, valor, moneda, plazo_entrega_dias, forma_pago, experiencia, entrega, entrega_na_result, descuento, certificaciones, recotizacion, notas, created_by, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
         );
         $stmt->execute([
             $purchaseRequestId,
@@ -34,6 +34,11 @@ class ProviderQuoteRepository
             $data['moneda'] ?? 'COP',
             $data['plazo_entrega_dias'],
             $data['forma_pago'],
+            $data['experiencia'],
+            $data['entrega'],
+            $data['entrega_na_result'],
+            $data['descuento'],
+            $data['certificaciones'],
             $data['recotizacion'] ? 1 : 0,
             $data['notas'] ?? null,
             $data['created_by'],
@@ -46,7 +51,7 @@ class ProviderQuoteRepository
     {
         $stmt = $this->db->pdo()->prepare(
             'UPDATE provider_quotes
-             SET tipo_compra = ?, valor = ?, moneda = ?, plazo_entrega_dias = ?, forma_pago = ?, recotizacion = ?, notas = ?, updated_at = NOW()
+             SET tipo_compra = ?, valor = ?, moneda = ?, plazo_entrega_dias = ?, forma_pago = ?, experiencia = ?, entrega = ?, entrega_na_result = ?, descuento = ?, certificaciones = ?, recotizacion = ?, notas = ?, updated_at = NOW()
              WHERE id = ?'
         );
         $stmt->execute([
@@ -55,10 +60,34 @@ class ProviderQuoteRepository
             $data['moneda'] ?? 'COP',
             $data['plazo_entrega_dias'],
             $data['forma_pago'],
+            $data['experiencia'],
+            $data['entrega'],
+            $data['entrega_na_result'],
+            $data['descuento'],
+            $data['certificaciones'],
             $data['recotizacion'] ? 1 : 0,
             $data['notas'] ?? null,
             $quoteId,
         ]);
+    }
+
+    public function latestQuotesByProvider(int $purchaseRequestId): array
+    {
+        $stmt = $this->db->pdo()->prepare(
+            'SELECT q.*, s.name AS provider_name
+             FROM provider_quotes q
+             INNER JOIN suppliers s ON s.id = q.provider_id
+             INNER JOIN (
+                SELECT provider_id, MAX(id) AS latest_quote_id
+                FROM provider_quotes
+                WHERE purchase_request_id = ?
+                GROUP BY provider_id
+             ) latest ON latest.latest_quote_id = q.id
+             WHERE q.purchase_request_id = ?
+             ORDER BY q.valor ASC, q.created_at DESC'
+        );
+        $stmt->execute([$purchaseRequestId, $purchaseRequestId]);
+        return $stmt->fetchAll();
     }
 
     public function find(int $quoteId): ?array

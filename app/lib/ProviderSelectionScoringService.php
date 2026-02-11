@@ -13,36 +13,68 @@ class ProviderSelectionScoringService
         ];
     }
 
-    public function score(string $tipoCompra, array $input): array
+    public function buildScoresFromQuotes(array $quotes): array
     {
-        $experiencia = $this->scoreExperiencia((string)($input['experiencia'] ?? ''));
-        $formaPago = $this->scoreFormaPago($tipoCompra, (string)($input['forma_pago'] ?? ''), (string)($input['forma_pago_na_result'] ?? ''));
-        $entrega = $this->scoreEntrega($tipoCompra, (string)($input['entrega'] ?? ''), (string)($input['entrega_na_result'] ?? ''));
-        $descuento = $this->scoreDescuento((string)($input['descuento'] ?? ''));
-        $certificaciones = $this->scoreCertificaciones((string)($input['certificaciones'] ?? ''));
-        $precios = $this->scorePrecios((string)($input['precios'] ?? ''));
+        if (empty($quotes)) {
+            return [];
+        }
 
-        $total = $experiencia + $formaPago + $entrega + $descuento + $certificaciones + $precios;
-        return [
-            'experiencia_score' => $experiencia,
-            'forma_pago_score' => $formaPago,
-            'entrega_score' => $entrega,
-            'descuento_score' => $descuento,
-            'certificaciones_score' => $certificaciones,
-            'precios_score' => $precios,
-            'total_score' => $total,
-            'detail' => [
-                'tipo_compra' => $tipoCompra,
-                'experiencia' => $input['experiencia'] ?? null,
-                'forma_pago' => $input['forma_pago'] ?? null,
-                'forma_pago_na_result' => $input['forma_pago_na_result'] ?? null,
-                'entrega' => $input['entrega'] ?? null,
-                'entrega_na_result' => $input['entrega_na_result'] ?? null,
-                'descuento' => $input['descuento'] ?? null,
-                'certificaciones' => $input['certificaciones'] ?? null,
-                'precios' => $input['precios'] ?? null,
-            ],
-        ];
+        $priceOptions = $this->resolvePriceOptions($quotes);
+        $result = [];
+
+        foreach ($quotes as $quote) {
+            $providerId = (int)($quote['provider_id'] ?? 0);
+            if ($providerId <= 0) {
+                continue;
+            }
+
+            $tipoCompra = (string)($quote['tipo_compra'] ?? 'BIENES');
+            $experiencia = $this->scoreExperiencia((string)($quote['experiencia'] ?? ''));
+            $formaPago = $this->scoreFormaPago($tipoCompra, (string)($quote['forma_pago'] ?? ''), (string)($quote['forma_pago_na_result'] ?? ''));
+            $entrega = $this->scoreEntrega($tipoCompra, (string)($quote['entrega'] ?? ''), (string)($quote['entrega_na_result'] ?? ''));
+            $descuento = $this->scoreDescuento((string)($quote['descuento'] ?? 'NO'));
+            $certificaciones = $this->scoreCertificaciones((string)($quote['certificaciones'] ?? 'NINGUNA'));
+
+            $priceOption = $priceOptions[$providerId] ?? 'IGUAL';
+            $precios = $this->scorePrecios($priceOption);
+
+            $total = $experiencia + $formaPago + $entrega + $descuento + $certificaciones + $precios;
+
+            $result[] = [
+                'provider_id' => $providerId,
+                'provider_name' => $quote['provider_name'] ?? ('Proveedor #' . $providerId),
+                'experiencia_score' => $experiencia,
+                'forma_pago_score' => $formaPago,
+                'entrega_score' => $entrega,
+                'descuento_score' => $descuento,
+                'certificaciones_score' => $certificaciones,
+                'precios_score' => $precios,
+                'total_score' => $total,
+                'detail' => [
+                    'tipo_compra' => $tipoCompra,
+                    'experiencia' => $quote['experiencia'] ?? null,
+                    'forma_pago' => $quote['forma_pago'] ?? null,
+                    'entrega' => $quote['entrega'] ?? null,
+                    'entrega_na_result' => $quote['entrega_na_result'] ?? null,
+                    'descuento' => $quote['descuento'] ?? null,
+                    'certificaciones' => $quote['certificaciones'] ?? null,
+                    'precios' => $priceOption,
+                    'valor' => (float)($quote['valor'] ?? 0),
+                ],
+            ];
+        }
+
+        usort($result, function (array $a, array $b) {
+            if ((int)$a['total_score'] === (int)$b['total_score']) {
+                if ((int)$a['precios_score'] === (int)$b['precios_score']) {
+                    return (int)$a['provider_id'] <=> (int)$b['provider_id'];
+                }
+                return (int)$b['precios_score'] <=> (int)$a['precios_score'];
+            }
+            return (int)$b['total_score'] <=> (int)$a['total_score'];
+        });
+
+        return $result;
     }
 
     public function resolveWinner(array $scores, ?int $manualWinnerProviderId, string $manualReason): array
@@ -103,6 +135,44 @@ class ProviderSelectionScoringService
         ];
     }
 
+    private function resolvePriceOptions(array $quotes): array
+    {
+        $pricesByProvider = [];
+        foreach ($quotes as $quote) {
+            $providerId = (int)($quote['provider_id'] ?? 0);
+            if ($providerId <= 0) {
+                continue;
+            }
+            $pricesByProvider[$providerId] = (float)($quote['valor'] ?? 0);
+        }
+
+        if (empty($pricesByProvider)) {
+            return [];
+        }
+
+        $min = min($pricesByProvider);
+        $max = max($pricesByProvider);
+        $options = [];
+
+        foreach ($pricesByProvider as $providerId => $price) {
+            if ($min === $max) {
+                $options[$providerId] = 'IGUAL';
+                continue;
+            }
+            if ((float)$price === (float)$min) {
+                $options[$providerId] = 'MENOR';
+                continue;
+            }
+            if ((float)$price === (float)$max) {
+                $options[$providerId] = 'MAYOR';
+                continue;
+            }
+            $options[$providerId] = 'IGUAL';
+        }
+
+        return $options;
+    }
+
     private function scoreExperiencia(string $option): int
     {
         return match ($option) {
@@ -131,6 +201,14 @@ class ProviderSelectionScoringService
     {
         if ($tipoCompra === 'SERVICIOS_TECNICOS') {
             return $naResult === 'CUMPLE' ? 20 : 0;
+        }
+
+        if ($tipoCompra === 'BIENES') {
+            return match ($option) {
+                'IGUAL_10' => 5,
+                'MENOR_5' => 20,
+                default => 0,
+            };
         }
 
         return match ($option) {

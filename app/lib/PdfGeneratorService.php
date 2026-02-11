@@ -12,49 +12,51 @@ class PdfGeneratorService
         $filename = 'analisis_seleccion_' . date('Ymd_His') . '.pdf';
         $fullPath = $dir . '/' . $filename;
 
-        $providers = array_slice($context['scores'], 0, 3);
-        $criteria = $context['criteria'];
+        $scores = $context['scores'] ?? [];
+        $headers = ['Proveedor', 'Precio', 'Exp.', 'Pago', 'Entrega', 'Desc.', 'Cert.', 'Precios', 'Total'];
+        $widths = [18, 10, 5, 5, 7, 5, 5, 7, 5];
 
         $lines = [
             'ANÁLISIS DE SELECCIÓN DE PROVEEDORES',
             'Versión: 01  Fecha: ' . date('d/m/Y'),
             'Solicitud: PR #' . $prId . ' - ' . ($context['purchase_request']['title'] ?? ''),
             '',
-            'CRITERIO | PROVEEDOR 1 | PROVEEDOR 2 | PROVEEDOR 3 | PONDERACIÓN | DESCRIPCIÓN/ESCALA',
+            $this->buildTableRow($headers, $widths),
+            $this->buildTableSeparator($widths),
         ];
 
-        foreach ($criteria as $key => $criterion) {
-            $scores = [];
-            foreach ([0, 1, 2] as $idx) {
-                $scores[] = isset($providers[$idx]) ? (string)($providers[$idx][$key . '_score'] ?? 0) : '-';
-            }
-
-            $lines[] = strtoupper($criterion['label'])
-                . ' | ' . $scores[0]
-                . ' | ' . $scores[1]
-                . ' | ' . $scores[2]
-                . ' | ' . $criterion['ponderacion'] . '%'
-                . ' | ' . $criterion['descripcion'];
+        foreach ($scores as $row) {
+            $detail = json_decode($row['criterio_detalle_json'] ?? '{}', true) ?: [];
+            $lines[] = $this->buildTableRow([
+                (string)($row['provider_name'] ?? 'N/D'),
+                number_format((float)($detail['valor'] ?? 0), 0),
+                (string)$row['experiencia_score'],
+                (string)$row['forma_pago_score'],
+                (string)$row['entrega_score'],
+                (string)$row['descuento_score'],
+                (string)$row['certificaciones_score'],
+                (string)$row['precios_score'],
+                (string)$row['total_score'],
+            ], $widths);
         }
 
-        $totals = [];
-        foreach ([0, 1, 2] as $idx) {
-            $totals[] = isset($providers[$idx]) ? (string)($providers[$idx]['total_score'] ?? 0) : '-';
-        }
-
-        $lines[] = 'TOTAL PUNTAJE | ' . $totals[0] . ' | ' . $totals[1] . ' | ' . $totals[2] . ' | 100 | ';        
         $lines[] = '';
         $lines[] = 'Ganador: ' . ($context['winner_name'] ?? 'N/D');
-        $lines[] = 'Comentarios adicionales / Observaciones:';
-        $lines[] = $context['observations'] ?: 'Sin observaciones';
+        $lines[] = 'Observaciones: ' . (($context['observations'] ?? '') ?: 'Sin observaciones');
 
-        $stream = "BT\n/F1 9 Tf\n36 800 Td\n";
+        $stream = "BT
+/F1 9 Tf
+36 800 Td
+";
         foreach ($lines as $index => $line) {
             $escaped = $this->pdfEscape($line);
             if ($index === 0) {
-                $stream .= "(" . $escaped . ") Tj\n";
+                $stream .= "(" . $escaped . ") Tj
+";
             } else {
-                $stream .= "0 -14 Td\n(" . $escaped . ") Tj\n";
+                $stream .= "0 -14 Td
+(" . $escaped . ") Tj
+";
             }
         }
         $stream .= "ET";
@@ -63,13 +65,35 @@ class PdfGeneratorService
         return '/storage/seleccion_proveedor/' . $prId . '/' . $filename;
     }
 
+    private function buildTableRow(array $values, array $widths): string
+    {
+        $cells = [];
+        foreach ($widths as $index => $width) {
+            $value = $values[$index] ?? '';
+            $clean = mb_strimwidth((string)$value, 0, $width, '');
+            $cells[] = str_pad($clean, $width, ' ');
+        }
+
+        return '| ' . implode(' | ', $cells) . ' |';
+    }
+
+    private function buildTableSeparator(array $widths): string
+    {
+        $segments = [];
+        foreach ($widths as $width) {
+            $segments[] = str_repeat('-', $width);
+        }
+
+        return '|-' . implode('-|-', $segments) . '-|';
+    }
+
     private function buildPdf(string $stream): string
     {
         $objects = [];
         $objects[] = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
         $objects[] = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
         $objects[] = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n";
-        $objects[] = "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+        $objects[] = "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n";
         $objects[] = "5 0 obj\n<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream\nendobj\n";
 
         $pdf = "%PDF-1.4\n";

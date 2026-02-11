@@ -23,15 +23,17 @@ class ProviderSelectionController
         $purchaseRequestId = (int)($_POST['purchase_request_id'] ?? 0);
         $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
 
-        $providersData = $_POST['providers'] ?? [];
-        foreach ($providersData as $providerId => $row) {
-            $providerId = (int)$providerId;
-            if ($providerId <= 0) {
-                continue;
-            }
-            $tipoCompra = (string)($row['tipo_compra'] ?? 'BIENES');
-            $result = $this->scoring->score($tipoCompra, $row);
-            $this->selections->upsertScore((int)$evaluation['id'], $providerId, $result, $result['detail'], trim((string)($row['observations'] ?? '')) ?: null);
+        $latestQuotes = $this->quotes->latestQuotesByProvider($purchaseRequestId);
+        $scores = $this->scoring->buildScoresFromQuotes($latestQuotes);
+
+        foreach ($scores as $score) {
+            $this->selections->upsertScore(
+                (int)$evaluation['id'],
+                (int)$score['provider_id'],
+                $score,
+                $score['detail'],
+                trim((string)($score['observations'] ?? '')) ?: null
+            );
         }
 
         $this->selections->updateDraftObservations((int)$evaluation['id'], trim((string)($_POST['observations'] ?? '')) ?: null);
@@ -56,10 +58,23 @@ class ProviderSelectionController
         }
 
         $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
+        $latestQuotes = $this->quotes->latestQuotesByProvider($purchaseRequestId);
+        $autoScores = $this->scoring->buildScoresFromQuotes($latestQuotes);
+
+        foreach ($autoScores as $score) {
+            $this->selections->upsertScore(
+                (int)$evaluation['id'],
+                (int)$score['provider_id'],
+                $score,
+                $score['detail'],
+                null
+            );
+        }
+
         $scores = $this->selections->scores((int)$evaluation['id']);
         if (count($scores) < 3) {
             http_response_code(422);
-            $this->flash->add('danger', 'Debe registrar puntajes para al menos 3 proveedores.');
+            $this->flash->add('danger', 'Debe registrar cotizaciones para al menos 3 proveedores.');
             header('Location: ' . route_to('provider_selection', ['id' => $purchaseRequestId]));
             return;
         }
