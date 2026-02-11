@@ -170,3 +170,39 @@ Ejecuta:
 ```sql
 SOURCE sql/migration_supplier_reevaluation_and_selection_modules.sql;
 ```
+
+
+## Módulo: Selección de Proveedor por Cotizaciones (después de solicitud APROBADA)
+
+> Alcance implementado: **solo selección por cotizaciones**. Este flujo no requiere crear ni usar módulo de reevaluación para operar.
+
+### Migraciones
+Ejecuta en este orden:
+```sql
+SOURCE sql/migration_supplier_reevaluation_and_selection_modules.sql;
+SOURCE sql/migration_supplier_selection_evaluation_upgrade.sql;
+SOURCE sql/migration_supplier_selection_quotations_upgrade.sql;
+```
+
+### Endpoints/rutas
+- `index.php?page=supplier_selection&id={purchase_request_id}`: pantalla principal del proceso.
+- `index.php?page=supplier_selection_quote_store` (POST): registro de cotización con adjuntos y validaciones.
+- `index.php?page=supplier_selection_decide` (POST): cálculo backend de puntajes, ranking, selección de ganador y acta PDF.
+- `index.php?page=supplier_selection_pdf&id={purchase_request_id}`: visualización del Acta PDF.
+
+### Reglas implementadas
+- Solo se habilita para solicitudes de compra en estado `APROBADA`.
+- Estado del proceso: `BORRADOR` → `EN_EVALUACION` (al tener 3 proveedores distintos) → `SELECCIONADO`.
+- Validación obligatoria de mínimo 3 cotizaciones de proveedores distintos para cerrar selección.
+- Campos nuevos de cotización: descuento (tipo/valor), experiencia, certificaciones (técnicas/comerciales/lista), y archivos por tipo.
+- Archivo de cotización obligatorio siempre.
+- Si hay certificaciones: lista + archivo de certificaciones obligatorios.
+- Criterio postventa/garantías con tres niveles obligatorios:
+  - Cumple oportunamente con todas las garantías y soporte técnico = 10
+  - Cumple parcialmente con las garantías y soporte técnico = 5
+  - No cumple con las garantías ni soporte técnico = 0
+- Puntajes por criterio (máximo 100):
+  - Precio neto (35), Descuento (10), Entrega (20), Pago (10), Garantía/postventa (10), Experiencia (10), Certificaciones (5).
+- Selección por mayor puntaje por defecto; si se escoge otro proveedor, exige justificación.
+- Acta PDF almacenada en: `/public/storage/actas_seleccion/{purchase_request_id}`.
+- Si falla el PDF, la selección queda guardada y se registra log de error.
