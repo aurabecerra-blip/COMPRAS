@@ -1,6 +1,10 @@
 <?php
 class SupplierEvaluationPdfBuilder
 {
+    public function __construct(private ?SettingsRepository $settings = null)
+    {
+    }
+
     public function generate(array $evaluation): string
     {
         $uploadDir = __DIR__ . '/../../public/uploads/evaluations';
@@ -11,64 +15,154 @@ class SupplierEvaluationPdfBuilder
         $filename = sprintf('evaluacion_proveedor_%d_%s.pdf', (int)$evaluation['supplier_id'], date('Ymd_His'));
         $absolutePath = $uploadDir . '/' . $filename;
 
-        $lines = [
-            'Evaluación de proveedor',
-            '',
-            'Proveedor: ' . ($evaluation['supplier_name'] ?? 'N/D'),
-            'NIT: ' . ($evaluation['supplier_nit'] ?? 'N/D'),
-            'Servicio: ' . ($evaluation['supplier_service'] ?? 'N/D'),
-            'Fecha: ' . ($evaluation['evaluation_date'] ?? date('Y-m-d H:i:s')),
-            'Evaluador: ' . ($evaluation['evaluator_name'] ?? 'N/D'),
-            'Puntaje total: ' . (int)($evaluation['total_score'] ?? 0) . ' / 100',
-            'Estado: ' . ($evaluation['status_label'] ?? 'N/D'),
-            '',
-            'Observaciones:',
-            (string)($evaluation['observations'] ?? 'Sin observaciones'),
-            '',
-            'Detalle de criterios:',
-        ];
+        $branding = $this->brandData();
+        [$logoData, $logoWidth, $logoHeight] = $this->logoJpegData($branding['logo_path']);
 
-        foreach (($evaluation['details'] ?? []) as $detail) {
-            $lines[] = '- ' . ($detail['criterion_name'] ?? '') . ': ' . ($detail['option_label'] ?? '') . ' (' . (int)($detail['score'] ?? 0) . ' pts)';
-        }
+        $stream = [];
+        $stream[] = '0.95 0.96 0.98 rg';
+        $stream[] = '30 730 535 95 re f';
 
-        [$logoData, $logoWidth, $logoHeight] = $this->logoJpegData();
-
-        $content = "";
         if ($logoData !== '') {
-            $content .= "q\n120 0 0 45 40 780 cm\n/Im1 Do\nQ\n";
+            $stream[] = 'q';
+            $stream[] = '90 0 0 36 42 772 cm';
+            $stream[] = '/Im1 Do';
+            $stream[] = 'Q';
         }
-        $content .= "BT\n/F1 11 Tf\n40 740 Td\n";
-        foreach ($lines as $index => $line) {
-            $escaped = $this->pdfEscape($line);
-            if ($index === 0) {
-                $content .= '(' . $escaped . ") Tj\n";
-            } else {
-                $content .= "0 -16 Td\n(" . $escaped . ") Tj\n";
+
+        $this->drawText($stream, 140, 804, 11, $branding['company_name'], true, [0.11, 0.19, 0.42]);
+        $this->drawText($stream, 140, 788, 9, 'NIT: ' . $branding['company_nit'], false, [0.20, 0.24, 0.32]);
+        $this->drawCenteredText($stream, 300, 770, 13, 'EVALUACIÓN DE PROVEEDORES', true, [0.11, 0.19, 0.42]);
+        $this->drawText($stream, 430, 804, 9, 'Versión: 02', false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 430, 790, 9, 'Fecha: ' . date('d/m/Y'), false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 430, 776, 9, 'Evaluador: ' . (string)($evaluation['evaluator_name'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
+
+        $this->drawText($stream, 34, 744, 8, 'Proveedor: ' . (string)($evaluation['supplier_name'] ?? 'N/D'), true, [0.11, 0.19, 0.42]);
+        $this->drawText($stream, 250, 744, 8, 'NIT: ' . (string)($evaluation['supplier_nit'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 380, 744, 8, 'Servicio: ' . (string)($evaluation['supplier_service'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
+
+        $tableX = 30;
+        $tableTop = 708;
+        $headerHeight = 24;
+        $rowHeight = 24;
+        $columns = [180, 220, 60, 75];
+        $headers = ['CRITERIO', 'RESULTADO', 'PUNTAJE', 'ESCALA'];
+
+        $stream[] = '0.11 0.19 0.42 rg';
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $tableTop - $headerHeight, array_sum($columns), $headerHeight);
+
+        $x = $tableX;
+        foreach ($headers as $index => $header) {
+            $this->drawText($stream, $x + 4, $tableTop - 16, 8, $header, true, [1, 1, 1]);
+            $x += $columns[$index];
+        }
+
+        $y = $tableTop - $headerHeight;
+        foreach (($evaluation['details'] ?? []) as $index => $detail) {
+            $y -= $rowHeight;
+            $fill = $index % 2 === 1 ? [0.99, 0.93, 0.96] : [1, 1, 1];
+            $stream[] = sprintf('%.2f %.2f %.2f rg', $fill[0], $fill[1], $fill[2]);
+            $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $y, array_sum($columns), $rowHeight);
+
+            $cells = [
+                (string)($detail['criterion_name'] ?? ''),
+                (string)($detail['option_label'] ?? ''),
+                (string)($detail['score'] ?? 0),
+                $this->extractScale((string)($detail['option_label'] ?? ''), (int)($detail['score'] ?? 0)),
+            ];
+
+            $cx = $tableX;
+            foreach ($cells as $c => $cell) {
+                $this->drawClippedText($stream, $cx + 4, $y + 9, 8, $cell, $columns[$c] - 8, [0.18, 0.21, 0.27], $c === 2);
+                $cx += $columns[$c];
             }
         }
-        $content .= "ET";
 
-        $pdf = $this->buildPdf($content, $logoData, $logoWidth, $logoHeight);
+        $y -= $rowHeight;
+        $stream[] = '0.08 0.15 0.34 rg';
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $y, array_sum($columns), $rowHeight);
+        $this->drawText($stream, $tableX + 4, $y + 9, 8, 'TOTAL PUNTAJE', true, [1, 1, 1]);
+        $this->drawText($stream, $tableX + $columns[0] + $columns[1] + 20, $y + 9, 8, (string)((int)($evaluation['total_score'] ?? 0)), true, [1, 1, 1]);
+        $this->drawText($stream, $tableX + $columns[0] + $columns[1] + $columns[2] + 12, $y + 9, 8, '/ 100', true, [1, 1, 1]);
+
+        $gridBottom = $y;
+        $stream[] = '0.84 0.87 0.92 RG';
+        $stream[] = '0.5 w';
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re S', $tableX, $gridBottom, array_sum($columns), ($tableTop - $gridBottom));
+        $xLine = $tableX;
+        foreach ($columns as $width) {
+            $xLine += $width;
+            $stream[] = sprintf('%.2f %.2f m %.2f %.2f l S', $xLine, $gridBottom, $xLine, $tableTop);
+        }
+
+        $statusY = $gridBottom - 52;
+        $stream[] = '0.95 0.69 0.79 rg';
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $statusY, 535, 34);
+        $this->drawText($stream, 42, $statusY + 20, 10, 'RESULTADO: ' . (string)($evaluation['status_label'] ?? 'N/D'), true, [0.38, 0.07, 0.24]);
+
+        $obsY = $statusY - 66;
+        $stream[] = '0.95 0.97 1.00 rg';
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $obsY, 535, 52);
+        $this->drawText($stream, 42, $obsY + 35, 9, 'COMENTARIOS / OBSERVACIONES', true, [0.11, 0.19, 0.42]);
+        $this->drawClippedText($stream, 42, $obsY + 18, 8, (string)($evaluation['observations'] ?? 'Sin observaciones registradas.'), 515, [0.18, 0.21, 0.27]);
+
+        $pdf = $this->buildPdf(implode("\n", $stream), $logoData, $logoWidth, $logoHeight);
         file_put_contents($absolutePath, $pdf);
 
         return '/uploads/evaluations/' . $filename;
     }
 
-    private function logoJpegData(): array
+    private function extractScale(string $label, int $score): string
     {
-        $logoPath = __DIR__ . '/../../assets/logo_aos.png';
-        if (!file_exists($logoPath) || !function_exists('imagecreatefrompng')) {
+        if ($score >= 80) {
+            return 'Alto';
+        }
+        if ($score >= 50) {
+            return 'Medio';
+        }
+        return $label !== '' ? 'Bajo' : 'N/A';
+    }
+
+    private function brandData(): array
+    {
+        $company = $this->settings?->get('company_name', 'AOS') ?? 'AOS';
+        $nit = $this->settings?->get('company_nit', '900.000.000-0') ?? '900.000.000-0';
+        $logoPath = $this->settings?->get('brand_logo_path', 'assets/logo_aos.png') ?? 'assets/logo_aos.png';
+
+        return [
+            'company_name' => trim($company) !== '' ? trim($company) : 'AOS',
+            'company_nit' => trim($nit) !== '' ? trim($nit) : '900.000.000-0',
+            'logo_path' => trim($logoPath) !== '' ? trim($logoPath) : 'assets/logo_aos.png',
+        ];
+    }
+
+    private function logoJpegData(string $logoSettingPath): array
+    {
+        $candidates = [];
+        $normalized = ltrim($logoSettingPath, '/');
+        $candidates[] = __DIR__ . '/../../public/' . $normalized;
+        $candidates[] = __DIR__ . '/../../' . $normalized;
+        $candidates[] = __DIR__ . '/../../assets/logo_aos.png';
+
+        $logoPath = '';
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                $logoPath = $candidate;
+                break;
+            }
+        }
+
+        if ($logoPath === '' || !function_exists('imagecreatefromstring')) {
             return ['', 1, 1];
         }
 
-        $image = @imagecreatefrompng($logoPath);
-        if (!$image) {
+        $raw = file_get_contents($logoPath);
+        if ($raw === false) {
             return ['', 1, 1];
         }
 
-        if (!function_exists('imagejpeg') || !function_exists('imagesx') || !function_exists('imagesy') || !function_exists('imagedestroy')) {
-            if (function_exists('imagedestroy')) {
+        $image = @imagecreatefromstring($raw);
+        if (!$image || !function_exists('imagejpeg') || !function_exists('imagesx') || !function_exists('imagesy')) {
+            if ($image && function_exists('imagedestroy')) {
                 imagedestroy($image);
             }
             return ['', 1, 1];
@@ -76,12 +170,61 @@ class SupplierEvaluationPdfBuilder
 
         ob_start();
         imagejpeg($image, null, 90);
-        $jpegData = ob_get_clean();
-        $width = imagesx($image);
-        $height = imagesy($image);
-        imagedestroy($image);
+        $jpegData = ob_get_clean() ?: '';
+        $width = max(1, imagesx($image));
+        $height = max(1, imagesy($image));
 
-        return [$jpegData ?: '', max(1, $width), max(1, $height)];
+        if (function_exists('imagedestroy')) {
+            imagedestroy($image);
+        }
+
+        return [$jpegData, $width, $height];
+    }
+
+    private function drawText(array &$stream, float $x, float $y, int $size, string $text, bool $bold = false, array $rgb = [0, 0, 0]): void
+    {
+        $font = $bold ? '/F2' : '/F1';
+        $stream[] = sprintf('%.2f %.2f %.2f rg', $rgb[0], $rgb[1], $rgb[2]);
+        $stream[] = 'BT';
+        $stream[] = sprintf('%s %d Tf', $font, $size);
+        $stream[] = sprintf('1 0 0 1 %.2f %.2f Tm', $x, $y);
+        $stream[] = '(' . $this->pdfEscape($text) . ') Tj';
+        $stream[] = 'ET';
+    }
+
+    private function drawCenteredText(array &$stream, float $centerX, float $y, int $size, string $text, bool $bold = false, array $rgb = [0, 0, 0]): void
+    {
+        $width = $this->textWidth($text, $size, $bold);
+        $this->drawText($stream, $centerX - ($width / 2), $y, $size, $text, $bold, $rgb);
+    }
+
+    private function drawClippedText(array &$stream, float $x, float $y, int $size, string $text, float $maxWidth, array $rgb = [0, 0, 0], bool $center = false): void
+    {
+        $content = $this->truncateText($text, $size, $maxWidth);
+        if ($center) {
+            $x += max(0, ($maxWidth - $this->textWidth($content, $size)) / 2);
+        }
+        $this->drawText($stream, $x, $y, $size, $content, false, $rgb);
+    }
+
+    private function truncateText(string $text, int $size, float $maxWidth): string
+    {
+        $text = trim($text);
+        if ($this->textWidth($text, $size) <= $maxWidth) {
+            return $text;
+        }
+
+        while ($text !== '' && $this->textWidth($text . '…', $size) > $maxWidth) {
+            $text = mb_substr($text, 0, max(0, mb_strlen($text) - 1));
+        }
+
+        return rtrim($text) . '…';
+    }
+
+    private function textWidth(string $text, int $size, bool $bold = false): float
+    {
+        $multiplier = $bold ? 0.56 : 0.52;
+        return mb_strlen($text) * ($size * $multiplier);
     }
 
     private function buildPdf(string $stream, string $logoData, int $logoWidth, int $logoHeight): string
@@ -91,18 +234,18 @@ class SupplierEvaluationPdfBuilder
         $objects[] = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
         $objects[] = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
 
-        $resources = '/Font << /F1 4 0 R >>';
+        $resources = '/Font << /F1 4 0 R /F2 6 0 R >>';
         if ($hasLogo) {
-            $resources .= ' /XObject << /Im1 6 0 R >>';
+            $resources .= ' /XObject << /Im1 7 0 R >>';
         }
 
         $objects[] = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << {$resources} >> /Contents 5 0 R >>\nendobj\n";
-        $objects[] = "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+        $objects[] = "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n";
         $objects[] = "5 0 obj\n<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream\nendobj\n";
+        $objects[] = "6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n";
 
         if ($hasLogo) {
-            $imgObj = "6 0 obj\n<< /Type /XObject /Subtype /Image /Width {$logoWidth} /Height {$logoHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($logoData) . " >>\nstream\n" . $logoData . "\nendstream\nendobj\n";
-            $objects[] = $imgObj;
+            $objects[] = "7 0 obj\n<< /Type /XObject /Subtype /Image /Width {$logoWidth} /Height {$logoHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($logoData) . " >>\nstream\n" . $logoData . "\nendstream\nendobj\n";
         }
 
         $pdf = "%PDF-1.4\n";
@@ -125,7 +268,8 @@ class SupplierEvaluationPdfBuilder
 
     private function pdfEscape(string $value): string
     {
-        $value = preg_replace('/\s+/', ' ', trim($value)) ?? '';
+        $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+        $value = iconv('UTF-8', 'Windows-1252//TRANSLIT//IGNORE', $value) ?: $value;
         return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $value);
     }
 }
