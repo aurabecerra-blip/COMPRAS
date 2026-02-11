@@ -32,6 +32,13 @@ ALTER TABLE supplier_quotations
     MODIFY valor_total DECIMAL(14,2) NOT NULL,
     MODIFY archivo_cotizacion_url VARCHAR(255) NOT NULL;
 
+-- Referencia para validar el nombre real en base de datos:
+-- SHOW CREATE TABLE supplier_selection_scores;
+-- En la creación inicial del esquema este nombre corresponde a:
+-- fk_supplier_selection_scores_quotation
+ALTER TABLE supplier_selection_scores
+    DROP FOREIGN KEY fk_supplier_selection_scores_quotation;
+
 ALTER TABLE supplier_selection_scores
     DROP INDEX uq_supplier_selection_scores_quotation,
     ADD COLUMN criterion_code VARCHAR(80) NOT NULL DEFAULT 'TOTAL' AFTER supplier_id,
@@ -41,3 +48,11 @@ ALTER TABLE supplier_selection_scores
     ADD COLUMN input_data_json JSON NULL AFTER score_value,
     ADD COLUMN formula_applied TEXT NULL AFTER input_data_json,
     ADD INDEX idx_supplier_selection_scores_criterion (criterion_code);
+
+ALTER TABLE supplier_selection_scores
+    ADD INDEX idx_supplier_selection_scores_quotation (quotation_id);
+
+ALTER TABLE supplier_selection_scores
+    ADD CONSTRAINT fk_supplier_selection_scores_quotation
+    FOREIGN KEY (quotation_id) REFERENCES supplier_quotations(id)
+    ON DELETE CASCADE;
