@@ -3,6 +3,7 @@ class AdminController
 {
     public function __construct(
         private SettingsRepository $settings,
+        private CompanyRepository $companies,
         private UserRepository $users,
         private NotificationTypeRepository $notificationTypes,
         private NotificationLogRepository $notificationLogs,
@@ -23,6 +24,8 @@ class AdminController
         $notificationTypes = $this->notificationTypes->all();
         $notificationLogs = $this->notificationLogs->latest();
         $settingsRepo = $this->settings;
+        $activeCompany = $this->companies->active();
+        $companies = $this->companies->all();
         include __DIR__ . '/../views/admin/index.php';
     }
 
@@ -163,7 +166,9 @@ class AdminController
     {
         $this->authMiddleware->check();
         $this->auth->requireRole(['administrador']);
+        $companyId = (int)($_POST['company_id'] ?? 0);
         $company = trim($_POST['company_name'] ?? '');
+        $nit = trim($_POST['company_nit'] ?? '');
         $logo = trim($_POST['brand_logo_path'] ?? '');
         $primary = trim($_POST['brand_primary_color'] ?? '');
         $accent = trim($_POST['brand_accent_color'] ?? '');
@@ -186,14 +191,32 @@ class AdminController
                 }
             }
         }
-        $this->settings->set('company_name', $company ?: 'AOS');
-        $this->settings->set('brand_logo_path', $logo ?: 'assets/aos-logo.svg');
-        $this->settings->set('brand_primary_color', $primary ?: '#0d6efd');
-        $this->settings->set('brand_accent_color', $accent ?: '#198754');
+
+        $savedCompanyId = $this->companies->upsert([
+            'id' => $companyId,
+            'name' => $company,
+            'nit' => $nit,
+            'logo_path' => $logo,
+            'primary_color' => $primary,
+            'secondary_color' => $accent,
+        ]);
+
+        if ($savedCompanyId > 0) {
+            $this->companies->setActive($savedCompanyId);
+            $active = $this->companies->active();
+            $this->settings->set('company_name', (string)$active['name']);
+            $this->settings->set('company_nit', (string)$active['nit']);
+            $this->settings->set('brand_logo_path', (string)$active['logo_path']);
+            $this->settings->set('brand_primary_color', (string)$active['primary_color']);
+            $this->settings->set('brand_accent_color', (string)$active['secondary_color']);
+        }
+
         $this->settings->set('form_areas', $areas);
         $this->settings->set('form_cost_centers', $costCenters);
         $this->audit->log($this->auth->user()['id'], 'settings_update', [
+            'company_id' => $savedCompanyId,
             'company' => $company,
+            'nit' => $nit,
             'logo' => $logo,
             'primary' => $primary,
             'accent' => $accent,
@@ -201,6 +224,31 @@ class AdminController
             'form_cost_centers' => $costCenters,
         ]);
         $this->flash->add('success', 'Configuración guardada');
+        header('Location: ' . route_to('admin'));
+    }
+
+
+    public function switchActiveCompany(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['administrador']);
+
+        $companyId = (int)($_POST['active_company_id'] ?? 0);
+        if (!$this->companies->setActive($companyId)) {
+            $this->flash->add('danger', 'No se pudo cambiar la empresa activa.');
+            header('Location: ' . route_to('admin'));
+            return;
+        }
+
+        $active = $this->companies->active();
+        $this->settings->set('company_name', (string)$active['name']);
+        $this->settings->set('company_nit', (string)$active['nit']);
+        $this->settings->set('brand_logo_path', (string)$active['logo_path']);
+        $this->settings->set('brand_primary_color', (string)$active['primary_color']);
+        $this->settings->set('brand_accent_color', (string)$active['secondary_color']);
+        $this->audit->log($this->auth->user()['id'], 'active_company_switch', ['company_id' => $companyId]);
+
+        $this->flash->add('success', 'Empresa activa actualizada.');
         header('Location: ' . route_to('admin'));
     }
 

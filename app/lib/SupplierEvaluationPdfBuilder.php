@@ -1,7 +1,7 @@
 <?php
 class SupplierEvaluationPdfBuilder
 {
-    public function __construct(private ?SettingsRepository $settings = null)
+    public function __construct(private ?SettingsRepository $settings = null, private ?CompanyRepository $companies = null)
     {
     }
 
@@ -16,10 +16,12 @@ class SupplierEvaluationPdfBuilder
         $absolutePath = $uploadDir . '/' . $filename;
 
         $branding = $this->brandData();
+        [$primaryR, $primaryG, $primaryB] = $this->hexToRgb($branding['primary_color']);
+        [$secondaryR, $secondaryG, $secondaryB] = $this->hexToRgb($branding['secondary_color']);
         [$logoData, $logoWidth, $logoHeight] = $this->logoJpegData($branding['logo_path']);
 
         $stream = [];
-        $stream[] = '0.95 0.96 0.98 rg';
+        $stream[] = '0.96 0.97 1.00 rg';
         $stream[] = '30 730 535 95 re f';
 
         if ($logoData !== '') {
@@ -29,12 +31,13 @@ class SupplierEvaluationPdfBuilder
             $stream[] = 'Q';
         }
 
-        $this->drawText($stream, 140, 804, 11, $branding['company_name'], true, [0.11, 0.19, 0.42]);
-        $this->drawText($stream, 140, 788, 9, 'NIT: ' . $branding['company_nit'], false, [0.20, 0.24, 0.32]);
-        $this->drawCenteredText($stream, 300, 770, 13, 'EVALUACIÓN DE PROVEEDORES', true, [0.11, 0.19, 0.42]);
-        $this->drawText($stream, 430, 804, 9, 'Versión: 02', false, [0.20, 0.24, 0.32]);
-        $this->drawText($stream, 430, 790, 9, 'Fecha: ' . date('d/m/Y'), false, [0.20, 0.24, 0.32]);
-        $this->drawText($stream, 430, 776, 9, 'Evaluador: ' . (string)($evaluation['evaluator_name'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
+        $documentTitle = strtoupper((string)($evaluation['document_title'] ?? 'EVALUACIÓN DE PROVEEDOR'));
+        $this->drawText($stream, 140, 805, 11, $branding['company_name'], true, [$primaryR, $primaryG, $primaryB]);
+        $this->drawText($stream, 140, 790, 9, 'NIT: ' . $branding['company_nit'], false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 805, 9, 'Versión: 02', false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 792, 9, 'Fecha: ' . date('d/m/Y'), false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 779, 9, 'Evaluador: ' . (string)($evaluation['evaluator_name'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
+        $this->drawCenteredText($stream, 300, 758, 13, $documentTitle, true, [$primaryR, $primaryG, $primaryB]);
 
         $this->drawText($stream, 34, 744, 8, 'Proveedor: ' . (string)($evaluation['supplier_name'] ?? 'N/D'), true, [0.11, 0.19, 0.42]);
         $this->drawText($stream, 250, 744, 8, 'NIT: ' . (string)($evaluation['supplier_nit'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
@@ -44,10 +47,10 @@ class SupplierEvaluationPdfBuilder
         $tableTop = 708;
         $headerHeight = 24;
         $rowHeight = 24;
-        $columns = [180, 220, 60, 75];
-        $headers = ['CRITERIO', 'RESULTADO', 'PUNTAJE', 'ESCALA'];
+        $columns = [150, 75, 230, 80];
+        $headers = ['CRITERIO', 'PONDERACIÓN (%)', 'DESCRIPCIÓN / ESCALA', 'PUNTAJE'];
 
-        $stream[] = '0.11 0.19 0.42 rg';
+        $stream[] = sprintf('%.3f %.3f %.3f rg', $primaryR, $primaryG, $primaryB);
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $tableTop - $headerHeight, array_sum($columns), $headerHeight);
 
         $x = $tableX;
@@ -63,11 +66,13 @@ class SupplierEvaluationPdfBuilder
             $stream[] = sprintf('%.2f %.2f %.2f rg', $fill[0], $fill[1], $fill[2]);
             $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $y, array_sum($columns), $rowHeight);
 
+            $criterionName = (string)($detail['criterion_name'] ?? '');
+            $score = (int)($detail['score'] ?? 0);
             $cells = [
-                (string)($detail['criterion_name'] ?? ''),
+                $criterionName,
+                (string)$this->criterionWeight($criterionName),
                 (string)($detail['option_label'] ?? ''),
-                (string)($detail['score'] ?? 0),
-                $this->extractScale((string)($detail['option_label'] ?? ''), (int)($detail['score'] ?? 0)),
+                (string)$score,
             ];
 
             $cx = $tableX;
@@ -78,7 +83,7 @@ class SupplierEvaluationPdfBuilder
         }
 
         $y -= $rowHeight;
-        $stream[] = '0.08 0.15 0.34 rg';
+        $stream[] = sprintf('%.3f %.3f %.3f rg', $primaryR, $primaryG, $primaryB);
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', $tableX, $y, array_sum($columns), $rowHeight);
         $this->drawText($stream, $tableX + 4, $y + 9, 8, 'TOTAL PUNTAJE', true, [1, 1, 1]);
         $this->drawText($stream, $tableX + $columns[0] + $columns[1] + 20, $y + 9, 8, (string)((int)($evaluation['total_score'] ?? 0)), true, [1, 1, 1]);
@@ -95,7 +100,7 @@ class SupplierEvaluationPdfBuilder
         }
 
         $statusY = $gridBottom - 52;
-        $stream[] = '0.95 0.69 0.79 rg';
+        $stream[] = sprintf('%.3f %.3f %.3f rg', $secondaryR, $secondaryG, $secondaryB);
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $statusY, 535, 34);
         $this->drawText($stream, 42, $statusY + 20, 10, 'RESULTADO: ' . (string)($evaluation['status_label'] ?? 'N/D'), true, [0.38, 0.07, 0.24]);
 
@@ -124,14 +129,50 @@ class SupplierEvaluationPdfBuilder
 
     private function brandData(): array
     {
-        $company = $this->settings?->get('company_name', 'AOS') ?? 'AOS';
-        $nit = $this->settings?->get('company_nit', '900.000.000-0') ?? '900.000.000-0';
-        $logoPath = $this->settings?->get('brand_logo_path', 'assets/logo_aos.png') ?? 'assets/logo_aos.png';
+        $activeCompany = $this->companies?->active() ?? [];
 
         return [
-            'company_name' => trim($company) !== '' ? trim($company) : 'AOS',
-            'company_nit' => trim($nit) !== '' ? trim($nit) : '900.000.000-0',
-            'logo_path' => trim($logoPath) !== '' ? trim($logoPath) : 'assets/logo_aos.png',
+            'company_name' => trim((string)($activeCompany['name'] ?? ($this->settings?->get('company_name', 'AOS') ?? 'AOS'))) ?: 'AOS',
+            'company_nit' => trim((string)($activeCompany['nit'] ?? ($this->settings?->get('company_nit', '900.635.119-8') ?? '900.635.119-8'))) ?: '900.635.119-8',
+            'logo_path' => trim((string)($activeCompany['logo_path'] ?? ($this->settings?->get('brand_logo_path', 'assets/logo_aos.png') ?? 'assets/logo_aos.png'))) ?: 'assets/logo_aos.png',
+            'primary_color' => trim((string)($activeCompany['primary_color'] ?? ($this->settings?->get('brand_primary_color', '#1E3A8A') ?? '#1E3A8A'))) ?: '#1E3A8A',
+            'secondary_color' => trim((string)($activeCompany['secondary_color'] ?? ($this->settings?->get('brand_accent_color', '#F8C8D8') ?? '#F8C8D8'))) ?: '#F8C8D8',
+        ];
+    }
+
+    private function criterionWeight(string $criterionName): int
+    {
+        $normalized = mb_strtolower(trim($criterionName));
+        if (str_contains($normalized, 'tiempo') || str_contains($normalized, 'entrega')) {
+            return 25;
+        }
+        if (str_contains($normalized, 'calidad')) {
+            return 25;
+        }
+        if (str_contains($normalized, 'postventa')) {
+            return 15;
+        }
+        if (str_contains($normalized, 'sqr')) {
+            return 15;
+        }
+        if (str_contains($normalized, 'document')) {
+            return 20;
+        }
+
+        return 0;
+    }
+
+    private function hexToRgb(string $hex): array
+    {
+        $hex = ltrim(trim($hex), '#');
+        if (strlen($hex) !== 6) {
+            return [0.12, 0.23, 0.54];
+        }
+
+        return [
+            hexdec(substr($hex, 0, 2)) / 255,
+            hexdec(substr($hex, 2, 2)) / 255,
+            hexdec(substr($hex, 4, 2)) / 255,
         ];
     }
 

@@ -1,13 +1,15 @@
 <?php
 $settingsRepo = $settingsRepo ?? ($GLOBALS['settingsRepo'] ?? null);
+$companyRepo = $companyRepo ?? ($GLOBALS['companyRepo'] ?? null);
 $auth = $auth ?? ($GLOBALS['auth'] ?? null);
 $flash = $flash ?? ($GLOBALS['flash'] ?? null);
 
-$brandName = $settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS';
-$brandLogoSetting = $settingsRepo ? $settingsRepo->get('brand_logo_path', 'assets/aos-logo.svg') : 'assets/aos-logo.svg';
-$brandLogo = str_starts_with($brandLogoSetting, 'http') ? $brandLogoSetting : asset_url($brandLogoSetting);
-$brandPrimary = $settingsRepo ? $settingsRepo->get('brand_primary_color', '#0d6efd') : '#0d6efd';
-$brandAccent = $settingsRepo ? $settingsRepo->get('brand_accent_color', '#198754') : '#198754';
+$activeCompany = $companyRepo ? $companyRepo->active() : [];
+$brandName = $activeCompany['name'] ?? ($settingsRepo ? $settingsRepo->get('company_name', 'AOS') : 'AOS');
+$brandLogoSetting = $activeCompany['logo_path'] ?? ($settingsRepo ? $settingsRepo->get('brand_logo_path', 'assets/logo_aos.png') : 'assets/logo_aos.png');
+$brandLogo = str_starts_with((string)$brandLogoSetting, 'http') ? $brandLogoSetting : asset_url((string)$brandLogoSetting);
+$brandPrimary = $activeCompany['primary_color'] ?? ($settingsRepo ? $settingsRepo->get('brand_primary_color', '#1E3A8A') : '#1E3A8A');
+$brandAccent = $activeCompany['secondary_color'] ?? ($settingsRepo ? $settingsRepo->get('brand_accent_color', '#F8C8D8') : '#F8C8D8');
 $authUser = $auth ? $auth->user() : null;
 $flashMessages = $flash ? $flash->getAll() : [];
 $currentPage = $_GET['page'] ?? ($authUser ? 'dashboard' : 'login');

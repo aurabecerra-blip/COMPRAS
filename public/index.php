@@ -55,7 +55,7 @@ $providerSelectionController = new ProviderSelectionController(
     new ProviderQuoteRepository($db),
     new ProviderSelectionRepository($db),
     new ProviderSelectionScoringService(),
-    new PdfGeneratorService($settingsRepo),
+    new PdfGeneratorService($settingsRepo, $companyRepo),
     $audit,
     $auth,
     $flash,
@@ -66,7 +66,7 @@ $supplierEvaluationController = new SupplierEvaluationController(
     new SupplierEvaluationRepository($db),
     new SupplierEvaluationCalculator(),
     $notificationService,
-    new SupplierEvaluationPdfBuilder($settingsRepo),
+    new SupplierEvaluationPdfBuilder($settingsRepo, $companyRepo),
     $flash,
     $audit,
     $auth,
@@ -75,6 +75,7 @@ $supplierEvaluationController = new SupplierEvaluationController(
 
 $adminController = new AdminController(
     $settingsRepo,
+    $companyRepo,
     $userRepo,
     $notificationTypes,
     $notificationLogs,
@@ -213,6 +214,9 @@ switch ($page) {
         break;
     case 'admin_users':
         $adminController->users();
+        break;
+    case 'admin_company_switch':
+        $adminController->switchActiveCompany();
         break;
     case 'admin_notifications':
         $adminController->updateNotifications();
