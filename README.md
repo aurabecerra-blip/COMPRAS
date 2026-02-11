@@ -130,3 +130,43 @@ Aplicativo web en PHP 8 + MySQL para control de compras alineado al flujo ISO 90
 - Repositorios: `ProviderQuoteRepository`, `ProviderSelectionRepository`
 - Servicios: `ProviderSelectionScoringService`, `PdfGeneratorService`
 - Vista principal: `app/views/provider_selection/index.php`
+
+## Nuevos módulos separados (2026)
+
+### 1) Módulo A · Reevaluación de Proveedor
+- Rutas:
+  - `index.php?page=reevaluations`
+  - `index.php?page=reevaluation_store` (POST)
+- Componentes:
+  - Controller: `app/controllers/ReevaluationController.php`
+  - Repository: `app/repositories/ReevaluationRepository.php`
+  - Service: `app/lib/ReevaluationService.php`
+  - Vista: `app/views/reevaluations/index.php`
+- Funcionalidades:
+  - Cálculo por ítem y total (0-100) en frontend (JS) y backend.
+  - Guarda cabecera + detalle de criterios.
+  - Genera PDF en `/public/storage/reevaluaciones`.
+  - Envía correo al proveedor con resumen y PDF adjunto. Si falla email, la reevaluación queda guardada y se registra estado/error.
+
+### 2) Módulo B · Evaluación de Selección de Proveedor
+- Rutas:
+  - `index.php?page=supplier_selection&id={purchase_request_id}`
+  - `index.php?page=supplier_selection_quote_store` (POST)
+  - `index.php?page=supplier_selection_decide` (POST)
+- Componentes:
+  - Controller: `app/controllers/SupplierSelectionController.php`
+  - Repository: `app/repositories/SupplierSelectionRepository.php`
+  - Service: `app/lib/SupplierSelectionService.php`
+  - Vista: `app/views/supplier_selection/index.php`
+- Reglas clave:
+  - Mínimo 3 cotizaciones de 3 proveedores distintos para poder decidir.
+  - Evidencias por archivo (PDF/imagen/Excel, máximo 10MB).
+  - Puntajes por criterio (precio, entrega, pago, garantía, técnico), total, ranking y ganador.
+  - Si el ganador no es el de mayor puntaje, exige justificación.
+  - Genera Acta PDF en `/public/storage/actas_seleccion/{purchase_request_id}`.
+
+### Migración SQL
+Ejecuta:
+```sql
+SOURCE sql/migration_supplier_reevaluation_and_selection_modules.sql;
+```
