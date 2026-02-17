@@ -180,6 +180,21 @@ switch ($page) {
     case 'supplier_store':
         $supplierController->store();
         break;
+    case 'supplier_update':
+        $supplierController->update();
+        break;
+    case 'supplier_delete':
+        $supplierController->delete();
+        break;
+    case 'suppliers_export_template':
+        $supplierController->exportTemplate();
+        break;
+    case 'suppliers_export':
+        $supplierController->exportAll();
+        break;
+    case 'suppliers_import':
+        $supplierController->importBulk();
+        break;
 
     case 'provider_selection':
         $providerQuoteController->index();
