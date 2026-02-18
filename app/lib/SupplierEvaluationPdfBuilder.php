@@ -256,7 +256,7 @@ class SupplierEvaluationPdfBuilder
         }
 
         while ($text !== '' && $this->textWidth($text . '…', $size) > $maxWidth) {
-            $text = mb_substr($text, 0, max(0, mb_strlen($text) - 1));
+            $text = $this->stringSubstr($text, 0, max(0, $this->stringLength($text) - 1));
         }
 
         return rtrim($text) . '…';
@@ -265,7 +265,33 @@ class SupplierEvaluationPdfBuilder
     private function textWidth(string $text, int $size, bool $bold = false): float
     {
         $multiplier = $bold ? 0.56 : 0.52;
-        return mb_strlen($text) * ($size * $multiplier);
+        return $this->stringLength($text) * ($size * $multiplier);
+    }
+
+    private function stringLength(string $text): int
+    {
+        if (function_exists('mb_strlen')) {
+            return mb_strlen($text);
+        }
+
+        return strlen($text);
+    }
+
+    private function stringSubstr(string $text, int $start, ?int $length = null): string
+    {
+        if (function_exists('mb_substr')) {
+            if ($length === null) {
+                return mb_substr($text, $start);
+            }
+
+            return mb_substr($text, $start, $length);
+        }
+
+        if ($length === null) {
+            return substr($text, $start);
+        }
+
+        return substr($text, $start, $length);
     }
 
     private function buildPdf(string $stream, string $logoData, int $logoWidth, int $logoHeight): string
