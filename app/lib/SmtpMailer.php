@@ -1,6 +1,8 @@
 <?php
 class SmtpMailer
 {
+    private const DEFAULT_TIMEOUT_SECONDS = 10;
+
     public function send(string $to, string $subject, string $htmlBody, array $config): void
     {
         $host = trim($config['host'] ?? '');
@@ -25,12 +27,16 @@ class SmtpMailer
 
         $this->validateSecurityPort($port, $security);
 
+        $timeoutSeconds = $this->resolveTimeout($config);
+
         $address = ($security === 'ssl') ? 'ssl://' . $host . ':' . $port : $host . ':' . $port;
-        $socket = stream_socket_client($address, $errno, $errstr, 15, STREAM_CLIENT_CONNECT);
+        $socket = stream_socket_client($address, $errno, $errstr, $timeoutSeconds, STREAM_CLIENT_CONNECT);
         if (!$socket) {
             $details = $errstr !== '' ? $errstr : 'sin mensaje';
             throw new RuntimeException('No se pudo conectar al servidor SMTP (' . $errno . '): ' . $details);
         }
+
+        stream_set_timeout($socket, $timeoutSeconds);
 
         $this->expect($socket, [220], 'saludo inicial');
         $this->command($socket, 'EHLO localhost', [250]);
@@ -93,6 +99,10 @@ class SmtpMailer
         while (!feof($socket)) {
             $line = fgets($socket, 515);
             if ($line === false) {
+                $meta = stream_get_meta_data($socket);
+                if (!empty($meta['timed_out'])) {
+                    throw new RuntimeException('Timeout SMTP durante ' . $context . '.');
+                }
                 break;
             }
             $response .= $line;
@@ -110,6 +120,12 @@ class SmtpMailer
             $message = trim($response);
             throw new RuntimeException('Error SMTP ' . $code . ': ' . $message);
         }
+    }
+
+    private function resolveTimeout(array $config): int
+    {
+        $timeout = (int)($config['timeout_seconds'] ?? self::DEFAULT_TIMEOUT_SECONDS);
+        return $timeout > 0 ? $timeout : self::DEFAULT_TIMEOUT_SECONDS;
     }
 
     private function encodeHeader(string $value): string
