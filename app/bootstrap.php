@@ -36,6 +36,27 @@ if (!function_exists('asset_url')) {
     }
 }
 
+if (!function_exists('absolute_url')) {
+    function absolute_url(string $path = ''): string
+    {
+        $relative = base_url($path);
+        if (preg_match('#^https?://#i', $relative)) {
+            return $relative;
+        }
+
+        $scheme = (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])
+            ? explode(',', (string)$_SERVER['HTTP_X_FORWARDED_PROTO'])[0]
+            : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http'));
+        $host = trim((string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? ''), " \t\n\r\0\x0B,");
+
+        if ($host === '') {
+            return $relative;
+        }
+
+        return $scheme . '://' . $host . $relative;
+    }
+}
+
 spl_autoload_register(function ($class) {
     $paths = [
         __DIR__ . '/lib/' . $class . '.php',
