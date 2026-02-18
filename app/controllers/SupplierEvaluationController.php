@@ -150,6 +150,7 @@ class SupplierEvaluationController
             try {
                 $this->notifications->send('supplier_evaluation_completed', $subject, $body, [
                     'recipients' => [$supplier['email']],
+                    'use_type_roles' => false,
                 ]);
             } catch (Throwable $e) {
                 $this->audit->log((int)$user['id'], 'supplier_evaluation_notification_error', [

@@ -26,7 +26,8 @@ class NotificationService
             return;
         }
 
-        $roleRecipients = $this->users->emailsByRoles($type['roles'] ?? []);
+        $useTypeRoles = !array_key_exists('use_type_roles', $context) || (bool)$context['use_type_roles'];
+        $roleRecipients = $useTypeRoles ? $this->users->emailsByRoles($type['roles'] ?? []) : [];
         $extraRecipients = $context['recipients'] ?? [];
         $recipients = array_merge($roleRecipients, $extraRecipients);
         $recipients = array_values(array_unique(array_filter(array_map('trim', $recipients))));
