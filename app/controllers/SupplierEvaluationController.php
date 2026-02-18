@@ -132,7 +132,7 @@ class SupplierEvaluationController
             . '<li><strong>Resultado:</strong> ' . htmlspecialchars($evaluation['status_label']) . '</li>'
             . '<li><strong>Observaciones:</strong> ' . htmlspecialchars($evaluation['observations'] ?: 'Sin observaciones') . '</li>'
             . '</ul>'
-            . (!empty($evaluation['pdf_path']) ? '<p><a href="' . htmlspecialchars(base_url($evaluation['pdf_path'])) . '" target="_blank">Descargar evaluación en PDF</a></p>' : '')
+            . (!empty($evaluation['pdf_path']) ? '<p><a href="' . htmlspecialchars(absolute_url($evaluation['pdf_path'])) . '" target="_blank">Descargar evaluación en PDF</a></p>' : '')
             . '<h3>Resumen de criterios</h3>'
             . '<table style="border-collapse:collapse;width:100%;font-size:14px">'
             . '<thead><tr>'
