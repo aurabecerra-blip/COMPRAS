@@ -124,23 +124,40 @@ class SupplierEvaluationPdfBuilder
     {
         $candidates = [];
 
-        // Prefer the repository public directory so generated files are aligned
-        // with the URL `/uploads/...` used by the application.
-        $candidates[] = __DIR__ . '/../../public/uploads/evaluations';
-
         $documentRoot = trim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
         if ($documentRoot !== '') {
             $candidates[] = rtrim($documentRoot, '/\\') . '/uploads/evaluations';
         }
 
+        // Fallback to repository public directory for local environments.
+        $candidates[] = __DIR__ . '/../../public/uploads/evaluations';
+
+        $projectRoot = realpath(__DIR__ . '/../../');
+        if ($projectRoot) {
+            $candidates[] = $projectRoot . '/public/uploads/evaluations';
+        }
+
+        $tempBase = rtrim(sys_get_temp_dir(), '/\\');
+        if ($tempBase !== '') {
+            $candidates[] = $tempBase . '/compras/uploads/evaluations';
+        }
+
         foreach ($candidates as $candidate) {
-            $parent = dirname($candidate);
-            if ((is_dir($candidate) && is_writable($candidate)) || (is_dir($parent) && is_writable($parent)) || (@mkdir($parent, 0775, true) && is_writable($parent))) {
+            if ($this->isUsableDirectory($candidate)) {
                 return $candidate;
             }
         }
 
         return __DIR__ . '/../../public/uploads/evaluations';
+    }
+
+    private function isUsableDirectory(string $directory): bool
+    {
+        if (is_dir($directory)) {
+            return is_writable($directory);
+        }
+
+        return @mkdir($directory, 0775, true) && is_writable($directory);
     }
 
     private function extractScale(string $label, int $score): string
