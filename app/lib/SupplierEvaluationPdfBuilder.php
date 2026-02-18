@@ -124,16 +124,18 @@ class SupplierEvaluationPdfBuilder
     {
         $candidates = [];
 
+        // Prefer the repository public directory so generated files are aligned
+        // with the URL `/uploads/...` used by the application.
+        $candidates[] = __DIR__ . '/../../public/uploads/evaluations';
+
         $documentRoot = trim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
         if ($documentRoot !== '') {
             $candidates[] = rtrim($documentRoot, '/\\') . '/uploads/evaluations';
         }
 
-        $candidates[] = __DIR__ . '/../../public/uploads/evaluations';
-
         foreach ($candidates as $candidate) {
             $parent = dirname($candidate);
-            if (is_dir($candidate) || is_dir($parent) || @mkdir($parent, 0775, true)) {
+            if ((is_dir($candidate) && is_writable($candidate)) || (is_dir($parent) && is_writable($parent)) || (@mkdir($parent, 0775, true) && is_writable($parent))) {
                 return $candidate;
             }
         }
