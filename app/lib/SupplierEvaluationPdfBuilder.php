@@ -116,11 +116,27 @@ class SupplierEvaluationPdfBuilder
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $statusY, 535, 34);
         $this->drawText($stream, 42, $statusY + 20, 10, 'RESULTADO: ' . (string)($evaluation['status_label'] ?? 'N/D'), true, [0.38, 0.07, 0.24]);
 
-        $obsY = $statusY - 66;
+        $obsY = $statusY - 130;
+        $obsBoxHeight = 116;
+        $obsText = trim((string)($evaluation['observations'] ?? ''));
+        if ($obsText === '') {
+            $obsText = 'Sin observaciones registradas.';
+        }
         $stream[] = '0.95 0.97 1.00 rg';
-        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $obsY, 535, 52);
-        $this->drawText($stream, 42, $obsY + 35, 9, 'COMENTARIOS / OBSERVACIONES', true, [0.11, 0.19, 0.42]);
-        $this->drawClippedText($stream, 42, $obsY + 18, 8, (string)($evaluation['observations'] ?? 'Sin observaciones registradas.'), 515, [0.18, 0.21, 0.27]);
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $obsY, 535, $obsBoxHeight);
+        $this->drawText($stream, 42, $obsY + $obsBoxHeight - 17, 9, 'COMENTARIOS / OBSERVACIONES', true, [0.11, 0.19, 0.42]);
+        $obsMaxLines = 8;
+        $this->drawWrappedText(
+            $stream,
+            42,
+            $obsY + $obsBoxHeight - 34,
+            8,
+            $obsText,
+            515,
+            $obsMaxLines,
+            11,
+            [0.18, 0.21, 0.27]
+        );
 
         $pdf = $this->buildPdf(implode("\n", $stream), $logoData, $logoWidth, $logoHeight);
         if (file_put_contents($absolutePath, $pdf) === false) {
