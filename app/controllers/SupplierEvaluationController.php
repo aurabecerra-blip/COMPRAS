@@ -48,6 +48,20 @@ class SupplierEvaluationController
 
         $absolutePath = $this->resolvePdfAbsolutePath((string)$evaluation['pdf_path']);
         if ($absolutePath === '' || !is_file($absolutePath)) {
+            try {
+                $pdfPath = $this->pdfBuilder->generate($evaluation);
+                $this->evaluations->attachPdf($evaluationId, $pdfPath);
+                $absolutePath = $this->resolvePdfAbsolutePath($pdfPath);
+            } catch (Throwable $e) {
+                $userId = (int)($this->auth->user()['id'] ?? 0);
+                $this->audit->log($userId, 'supplier_evaluation_pdf_regenerate_error', [
+                    'evaluation_id' => $evaluationId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($absolutePath === '' || !is_file($absolutePath)) {
             http_response_code(404);
             echo 'No se encontró el archivo PDF en el servidor.';
             return;

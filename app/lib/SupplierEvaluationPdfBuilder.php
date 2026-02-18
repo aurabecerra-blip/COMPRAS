@@ -129,26 +129,24 @@ class SupplierEvaluationPdfBuilder
             $candidates[] = rtrim($documentRoot, '/\\') . '/uploads/evaluations';
         }
 
-        // Fallback to repository public directory for local environments.
-        $candidates[] = __DIR__ . '/../../public/uploads/evaluations';
-
-        $projectRoot = realpath(__DIR__ . '/../../');
-        if ($projectRoot) {
-            $candidates[] = $projectRoot . '/public/uploads/evaluations';
+        $projectPublicDir = realpath(__DIR__ . '/../../public');
+        if ($projectPublicDir) {
+            $candidates[] = rtrim($projectPublicDir, '/\\') . '/uploads/evaluations';
         }
 
-        $tempBase = rtrim(sys_get_temp_dir(), '/\\');
-        if ($tempBase !== '') {
-            $candidates[] = $tempBase . '/compras/uploads/evaluations';
-        }
-
+        $checked = [];
         foreach ($candidates as $candidate) {
+            if ($candidate === '' || isset($checked[$candidate])) {
+                continue;
+            }
+
+            $checked[$candidate] = true;
             if ($this->isUsableDirectory($candidate)) {
                 return $candidate;
             }
         }
 
-        return __DIR__ . '/../../public/uploads/evaluations';
+        throw new RuntimeException('No se encontró un directorio público escribible para /uploads/evaluations.');
     }
 
     private function isUsableDirectory(string $directory): bool
