@@ -30,6 +30,36 @@ class SupplierEvaluationController
         include __DIR__ . '/../views/supplier_evaluations/index.php';
     }
 
+    public function downloadPdf(): void
+    {
+        $evaluationId = (int)($_GET['evaluation_id'] ?? 0);
+        if ($evaluationId <= 0) {
+            http_response_code(400);
+            echo 'Solicitud inválida.';
+            return;
+        }
+
+        $evaluation = $this->evaluations->findWithDetails($evaluationId);
+        if (!$evaluation || empty($evaluation['pdf_path'])) {
+            http_response_code(404);
+            echo 'PDF no disponible para esta evaluación.';
+            return;
+        }
+
+        $absolutePath = $this->resolvePdfAbsolutePath((string)$evaluation['pdf_path']);
+        if ($absolutePath === '' || !is_file($absolutePath)) {
+            http_response_code(404);
+            echo 'No se encontró el archivo PDF en el servidor.';
+            return;
+        }
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . basename($absolutePath) . '"');
+        header('Content-Length: ' . (string)filesize($absolutePath));
+        header('Cache-Control: private, max-age=300');
+        readfile($absolutePath);
+    }
+
     public function store(): void
     {
         $this->authMiddleware->check();
@@ -156,7 +186,7 @@ class SupplierEvaluationController
             . '<li><strong>Resultado:</strong> ' . htmlspecialchars($evaluation['status_label']) . '</li>'
             . '<li><strong>Observaciones:</strong> ' . htmlspecialchars($evaluation['observations'] ?: 'Sin observaciones') . '</li>'
             . '</ul>'
-            . (!empty($evaluation['pdf_path']) ? '<p><a href="' . htmlspecialchars(absolute_url($evaluation['pdf_path'])) . '" target="_blank">Descargar evaluación en PDF</a></p>' : '')
+            . (!empty($evaluation['pdf_path']) ? '<p><a href="' . htmlspecialchars(absolute_url(route_to('supplier_evaluation_pdf', ['evaluation_id' => (int)$evaluation['id']]))) . '" target="_blank">Descargar evaluación en PDF</a></p>' : '')
             . '<h3>Resumen de criterios</h3>'
             . '<table style="border-collapse:collapse;width:100%;font-size:14px">'
             . '<thead><tr>'
@@ -165,5 +195,35 @@ class SupplierEvaluationController
             . '<th style="padding:8px;border:1px solid #e6e8eb;text-align:right;background:#f9fafb">Puntaje</th>'
             . '</tr></thead><tbody>' . $rows . '</tbody></table>'
             . '</div>';
+    }
+
+    private function resolvePdfAbsolutePath(string $pdfPath): string
+    {
+        $trimmed = trim($pdfPath);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        if ($trimmed[0] !== '/' && is_file($trimmed)) {
+            return $trimmed;
+        }
+
+        $normalizedPath = '/' . ltrim($trimmed, '/');
+        $candidates = [];
+
+        $documentRoot = trim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($documentRoot !== '') {
+            $candidates[] = rtrim($documentRoot, '/\\') . $normalizedPath;
+        }
+
+        $candidates[] = __DIR__ . '/../../public' . $normalizedPath;
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return '';
     }
 }
