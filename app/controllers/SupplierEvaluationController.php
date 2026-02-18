@@ -84,18 +84,36 @@ class SupplierEvaluationController
 
         $evaluation = $this->evaluations->findWithDetails($evaluationId);
 
+        $pdfGenerated = false;
         if ($evaluation) {
-            $pdfPath = $this->pdfBuilder->generate($evaluation);
-            $this->evaluations->attachPdf($evaluationId, $pdfPath);
-            $evaluation['pdf_path'] = $pdfPath;
+            try {
+                $pdfPath = $this->pdfBuilder->generate($evaluation);
+                $this->evaluations->attachPdf($evaluationId, $pdfPath);
+                $evaluation['pdf_path'] = $pdfPath;
+                $pdfGenerated = true;
+            } catch (Throwable $e) {
+                $this->audit->log((int)$user['id'], 'supplier_evaluation_pdf_error', [
+                    'evaluation_id' => $evaluationId,
+                    'supplier_id' => $supplierId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         if ($evaluation) {
             $subject = 'Resultado de evaluación de proveedor - ' . $evaluation['status_label'];
             $body = $this->buildEmailTemplate($evaluation);
-            $this->notifications->send('supplier_evaluation_completed', $subject, $body, [
-                'recipients' => [$supplier['email']],
-            ]);
+            try {
+                $this->notifications->send('supplier_evaluation_completed', $subject, $body, [
+                    'recipients' => [$supplier['email']],
+                ]);
+            } catch (Throwable $e) {
+                $this->audit->log((int)$user['id'], 'supplier_evaluation_notification_error', [
+                    'evaluation_id' => $evaluationId,
+                    'supplier_id' => $supplierId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $this->audit->log((int)$user['id'], 'supplier_evaluation_create', [
@@ -105,7 +123,12 @@ class SupplierEvaluationController
             'status_label' => $result['status_label'],
         ]);
 
-        $this->flash->add('success', 'Evaluación registrada y enviada al proveedor.');
+        $this->flash->add(
+            $pdfGenerated ? 'success' : 'warning',
+            $pdfGenerated
+                ? 'Evaluación registrada y enviada al proveedor con su PDF.'
+                : 'Evaluación registrada y enviada al proveedor, pero no se pudo generar el PDF. Verifique permisos del directorio /uploads/evaluations.'
+        );
         header('Location: ' . route_to('supplier_evaluations', ['show' => $evaluationId]));
     }
 
@@ -122,7 +145,8 @@ class SupplierEvaluationController
 
         return '<div style="font-family:Arial,sans-serif;color:#1f2937">'
             . '<h2>Resultado de evaluación de proveedor</h2>'
-            . '<p>Se ha completado una evaluación de su desempeño como proveedor.</p>'
+            . '<p>Hola ' . htmlspecialchars($evaluation['supplier_name']) . ',</p>'
+            . '<p>Se ha completado una evaluación de su desempeño como proveedor. A continuación encontrará el resumen y su archivo en PDF para descarga.</p>'
             . '<ul>'
             . '<li><strong>Proveedor:</strong> ' . htmlspecialchars($evaluation['supplier_name']) . '</li>'
             . '<li><strong>NIT:</strong> ' . htmlspecialchars($evaluation['supplier_nit'] ?: 'N/D') . '</li>'
