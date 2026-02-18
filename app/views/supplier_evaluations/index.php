@@ -165,7 +165,7 @@ if ($showId > 0) {
                                     <td><span class="badge bg-secondary-subtle text-dark"><?= htmlspecialchars($evaluation['status_label']) ?></span></td>
                                     <td>
                                         <?php if (!empty($evaluation['pdf_path'])): ?>
-                                            <a href="<?= htmlspecialchars(base_url($evaluation['pdf_path'])) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver PDF</a>
+                                            <a href="<?= htmlspecialchars(route_to('supplier_evaluation_pdf', ['evaluation_id' => (int)$evaluation['id']])) ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver PDF</a>
                                         <?php else: ?>
                                             <span class="text-muted small">N/D</span>
                                         <?php endif; ?>
@@ -195,7 +195,7 @@ if ($showId > 0) {
             </div>
             <p class="mb-0 mt-2"><strong>Observaciones:</strong> <?= htmlspecialchars($selectedEvaluation['observations'] ?: 'Sin observaciones') ?></p>
             <?php if (!empty($selectedEvaluation['pdf_path'])): ?>
-                <a href="<?= htmlspecialchars(base_url($selectedEvaluation['pdf_path'])) ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-3">
+                <a href="<?= htmlspecialchars(route_to('supplier_evaluation_pdf', ['evaluation_id' => (int)$selectedEvaluation['id']])) ?>" target="_blank" class="btn btn-sm btn-outline-primary mt-3">
                     <i class="bi bi-file-earmark-pdf"></i> Descargar PDF de evaluación
                 </a>
             <?php endif; ?>

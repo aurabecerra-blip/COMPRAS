@@ -112,10 +112,12 @@ if ($page === 'logout') {
     $authController->logout();
 }
 
-$publicPages = ['track'];
+$publicPages = ['track', 'supplier_evaluation_pdf'];
 if (in_array($page, $publicPages, true)) {
     if ($page === 'track') {
         $trackingController->show();
+    } elseif ($page === 'supplier_evaluation_pdf') {
+        $supplierEvaluationController->downloadPdf();
     }
     exit;
 }
@@ -217,6 +219,9 @@ switch ($page) {
         break;
     case 'supplier_evaluation_store':
         $supplierEvaluationController->store();
+        break;
+    case 'supplier_evaluation_pdf':
+        $supplierEvaluationController->downloadPdf();
         break;
     case 'audit':
         $auditController->index();
