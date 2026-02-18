@@ -142,7 +142,7 @@ class SupplierEvaluationPdfBuilder
 
     private function criterionWeight(string $criterionName): int
     {
-        $normalized = mb_strtolower(trim($criterionName));
+        $normalized = $this->stringToLower(trim($criterionName));
         if (str_contains($normalized, 'tiempo') || str_contains($normalized, 'entrega')) {
             return 25;
         }
@@ -336,7 +336,18 @@ class SupplierEvaluationPdfBuilder
     private function pdfEscape(string $value): string
     {
         $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
-        $value = iconv('UTF-8', 'Windows-1252//TRANSLIT//IGNORE', $value) ?: $value;
+        if (function_exists('iconv')) {
+            $value = iconv('UTF-8', 'Windows-1252//TRANSLIT//IGNORE', $value) ?: $value;
+        }
         return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $value);
+    }
+
+    private function stringToLower(string $text): string
+    {
+        if (function_exists('mb_strtolower')) {
+            return mb_strtolower($text);
+        }
+
+        return strtolower($text);
     }
 }
