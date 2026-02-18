@@ -43,7 +43,17 @@ class SupplierEvaluationPdfBuilder
 
         $this->drawText($stream, 34, 744, 8, 'Proveedor: ' . (string)($evaluation['supplier_name'] ?? 'N/D'), true, [0.11, 0.19, 0.42]);
         $this->drawText($stream, 250, 744, 8, 'NIT: ' . (string)($evaluation['supplier_nit'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
-        $this->drawText($stream, 380, 744, 8, 'Servicio: ' . (string)($evaluation['supplier_service'] ?? 'N/D'), false, [0.20, 0.24, 0.32]);
+        $this->drawWrappedText(
+            $stream,
+            380,
+            744,
+            8,
+            'Servicio: ' . (string)($evaluation['supplier_service'] ?? 'N/D'),
+            185,
+            2,
+            10,
+            [0.20, 0.24, 0.32]
+        );
 
         $tableX = 30;
         $tableTop = 708;
@@ -279,6 +289,71 @@ class SupplierEvaluationPdfBuilder
     {
         $width = $this->textWidth($text, $size, $bold);
         $this->drawText($stream, $centerX - ($width / 2), $y, $size, $text, $bold, $rgb);
+    }
+
+    private function drawWrappedText(
+        array &$stream,
+        float $x,
+        float $y,
+        int $size,
+        string $text,
+        float $maxWidth,
+        int $maxLines = 2,
+        float $lineHeight = 10,
+        array $rgb = [0, 0, 0],
+        bool $bold = false
+    ): void
+    {
+        $lines = $this->splitTextToLines($text, $size, $maxWidth, $maxLines, $bold);
+        foreach ($lines as $index => $line) {
+            $this->drawText($stream, $x, $y - ($lineHeight * $index), $size, $line, $bold, $rgb);
+        }
+    }
+
+    private function splitTextToLines(string $text, int $size, float $maxWidth, int $maxLines, bool $bold = false): array
+    {
+        $normalized = trim((string)(preg_replace('/\s+/', ' ', $text) ?? $text));
+        if ($normalized === '') {
+            return [''];
+        }
+
+        $words = preg_split('/\s+/', $normalized) ?: [];
+        $lines = [];
+        $current = '';
+
+        while ($words !== []) {
+            $word = array_shift($words);
+            $candidate = $current === '' ? $word : $current . ' ' . $word;
+            if ($this->textWidth($candidate, $size, $bold) <= $maxWidth) {
+                $current = $candidate;
+                continue;
+            }
+
+            if ($current === '') {
+                $current = $this->truncateText($word, $size, $maxWidth);
+            }
+
+            $lines[] = $current;
+            if (count($lines) >= $maxLines) {
+                $remaining = trim(implode(' ', array_merge([$word], $words)));
+                if ($remaining !== '') {
+                    $lastLine = rtrim($lines[$maxLines - 1]) . ' ' . $remaining;
+                    $lines[$maxLines - 1] = $this->truncateText($lastLine, $size, $maxWidth);
+                }
+                return $lines;
+            }
+
+            $current = $current === $word ? '' : $word;
+            if ($current !== '' && $this->textWidth($current, $size, $bold) > $maxWidth) {
+                $current = $this->truncateText($current, $size, $maxWidth);
+            }
+        }
+
+        if ($current !== '') {
+            $lines[] = $current;
+        }
+
+        return $lines;
     }
 
     private function drawClippedText(array &$stream, float $x, float $y, int $size, string $text, float $maxWidth, array $rgb = [0, 0, 0], bool $center = false): void
