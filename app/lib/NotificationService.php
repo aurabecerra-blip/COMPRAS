@@ -93,6 +93,7 @@ class NotificationService
             'password' => $this->settings->get('notifications_smtp_password', ''),
             'from_email' => $this->settings->get('notifications_from_email', ''),
             'from_name' => $this->settings->get('notifications_from_name', ''),
+            'timeout_seconds' => (int)($this->settings->get('notifications_smtp_timeout', '10') ?: 10),
         ];
     }
 
