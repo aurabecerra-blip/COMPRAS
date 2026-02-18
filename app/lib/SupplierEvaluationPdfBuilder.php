@@ -7,9 +7,11 @@ class SupplierEvaluationPdfBuilder
 
     public function generate(array $evaluation): string
     {
-        $uploadDir = __DIR__ . '/../../public/uploads/evaluations';
+        $uploadDir = $this->resolveUploadDir();
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0775, true);
+            if (!mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+                throw new RuntimeException('No se pudo crear el directorio para PDFs de evaluación.');
+            }
         }
 
         $filename = sprintf('evaluacion_proveedor_%d_%s.pdf', (int)$evaluation['supplier_id'], date('Ymd_His'));
@@ -111,9 +113,32 @@ class SupplierEvaluationPdfBuilder
         $this->drawClippedText($stream, 42, $obsY + 18, 8, (string)($evaluation['observations'] ?? 'Sin observaciones registradas.'), 515, [0.18, 0.21, 0.27]);
 
         $pdf = $this->buildPdf(implode("\n", $stream), $logoData, $logoWidth, $logoHeight);
-        file_put_contents($absolutePath, $pdf);
+        if (file_put_contents($absolutePath, $pdf) === false) {
+            throw new RuntimeException('No se pudo guardar el PDF de evaluación del proveedor.');
+        }
 
         return '/uploads/evaluations/' . $filename;
+    }
+
+    private function resolveUploadDir(): string
+    {
+        $candidates = [];
+
+        $documentRoot = trim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($documentRoot !== '') {
+            $candidates[] = rtrim($documentRoot, '/\\') . '/uploads/evaluations';
+        }
+
+        $candidates[] = __DIR__ . '/../../public/uploads/evaluations';
+
+        foreach ($candidates as $candidate) {
+            $parent = dirname($candidate);
+            if (is_dir($candidate) || is_dir($parent) || @mkdir($parent, 0775, true)) {
+                return $candidate;
+            }
+        }
+
+        return __DIR__ . '/../../public/uploads/evaluations';
     }
 
     private function extractScale(string $label, int $score): string
