@@ -177,6 +177,81 @@ class SupplierEvaluationController
         header('Location: ' . route_to('supplier_evaluations', ['show' => $evaluationId]));
     }
 
+    public function delete(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['lider', 'administrador']);
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        $evaluationId = (int)($_POST['id'] ?? 0);
+        if ($evaluationId <= 0) {
+            $this->flash->add('danger', 'Evaluación inválida para eliminar.');
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        $evaluation = $this->evaluations->findWithDetails($evaluationId);
+        if (!$evaluation) {
+            $this->flash->add('danger', 'La evaluación no existe o ya fue eliminada.');
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        try {
+            $this->evaluations->delete($evaluationId);
+            $absolutePath = $this->resolvePdfAbsolutePath((string)($evaluation['pdf_path'] ?? ''));
+            if ($absolutePath !== '' && is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
+
+            $this->audit->log((int)$this->auth->user()['id'], 'supplier_evaluation_delete', [
+                'evaluation_id' => $evaluationId,
+                'supplier_id' => (int)$evaluation['supplier_id'],
+            ]);
+            $this->flash->add('success', 'Evaluación eliminada correctamente.');
+        } catch (Throwable $e) {
+            $this->flash->add('danger', 'No se pudo eliminar la evaluación.');
+        }
+
+        header('Location: ' . route_to('supplier_evaluations'));
+    }
+
+    public function exportExcel(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['lider', 'administrador']);
+
+        $rows = $this->evaluations->allForExport();
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="evaluaciones_proveedor.csv"');
+
+        echo "\xEF\xBB\xBF";
+        $out = fopen('php://output', 'wb');
+        fputcsv($out, ['ID', 'Fecha', 'Proveedor', 'NIT', 'Servicio', 'Líder evaluador', 'Puntaje', 'Estado', 'Observaciones']);
+
+        foreach ($rows as $row) {
+            fputcsv($out, [
+                $row['id'] ?? '',
+                $row['evaluation_date'] ?? '',
+                $row['supplier_name'] ?? '',
+                $row['supplier_nit'] ?? '',
+                $row['supplier_service'] ?? '',
+                $row['evaluator_name'] ?? '',
+                $row['total_score'] ?? '',
+                $row['status_label'] ?? '',
+                $row['observations'] ?? '',
+            ]);
+        }
+
+        fclose($out);
+        exit;
+    }
+
     private function buildEmailTemplate(array $evaluation): string
     {
         $rows = '';

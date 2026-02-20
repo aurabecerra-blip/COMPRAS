@@ -62,6 +62,24 @@ class SupplierEvaluationRepository
         return $evaluation;
     }
 
+    public function allForExport(): array
+    {
+        $stmt = $this->db->pdo()->query('SELECT ep.id, ep.evaluation_date, ep.total_score, ep.status_label, ep.observations,
+                                                s.name AS supplier_name, s.nit AS supplier_nit, s.service AS supplier_service,
+                                                u.name AS evaluator_name
+                                         FROM supplier_evaluations ep
+                                         INNER JOIN suppliers s ON s.id = ep.supplier_id
+                                         INNER JOIN users u ON u.id = ep.evaluator_user_id
+                                         ORDER BY ep.evaluation_date DESC, ep.id DESC');
+        return $stmt->fetchAll();
+    }
+
+    public function delete(int $id): void
+    {
+        $stmt = $this->db->pdo()->prepare('DELETE FROM supplier_evaluations WHERE id = ?');
+        $stmt->execute([$id]);
+    }
+
 
     public function attachPdf(int $evaluationId, string $pdfPath): void
     {

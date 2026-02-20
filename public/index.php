@@ -222,6 +222,12 @@ switch ($page) {
     case 'supplier_evaluation_store':
         $supplierEvaluationController->store();
         break;
+    case 'supplier_evaluation_delete':
+        $supplierEvaluationController->delete();
+        break;
+    case 'supplier_evaluations_export':
+        $supplierEvaluationController->exportExcel();
+        break;
     case 'supplier_evaluation_pdf':
         $supplierEvaluationController->downloadPdf();
         break;
