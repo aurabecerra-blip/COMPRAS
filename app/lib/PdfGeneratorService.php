@@ -56,6 +56,16 @@ class PdfGeneratorService
 
         $winner = (string)($context['winner_name'] ?? 'N/D');
         $observations = trim((string)($context['observations'] ?? ''));
+        $requestDescription = trim((string)(($context['purchase_request']['description'] ?? '')));
+        $requestJustification = trim((string)(($context['purchase_request']['justification'] ?? '')));
+        $requestAttachments = array_values($context['request_attachments'] ?? []);
+        $attachmentSummary = [];
+        foreach ($requestAttachments as $attachment) {
+            $name = trim((string)($attachment['original_name'] ?? ''));
+            if ($name !== '') {
+                $attachmentSummary[] = $name;
+            }
+        }
 
         $stream = [];
         $stream[] = '0.96 0.97 1.00 rg';
@@ -146,6 +156,17 @@ class PdfGeneratorService
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $obsY, 535, 52);
         $this->drawText($stream, 42, $obsY + 35, 9, 'COMENTARIOS / OBSERVACIONES', true, [0.11, 0.19, 0.42]);
         $this->drawClippedText($stream, 42, $obsY + 18, 8, $observations !== '' ? $observations : 'Sin observaciones registradas.', 515, [0.18, 0.21, 0.27]);
+
+        $requestBoxY = $obsY - 112;
+        $stream[] = '0.98 0.99 1.00 rg';
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $requestBoxY, 535, 98);
+        $this->drawText($stream, 42, $requestBoxY + 82, 9, 'DETALLE DE SOLICITUD', true, [0.11, 0.19, 0.42]);
+        $this->drawText($stream, 42, $requestBoxY + 66, 8, 'Descripción:', true, [0.18, 0.21, 0.27]);
+        $this->drawClippedText($stream, 98, $requestBoxY + 66, 8, $requestDescription !== '' ? $requestDescription : 'Sin descripción registrada.', 459, [0.18, 0.21, 0.27]);
+        $this->drawText($stream, 42, $requestBoxY + 50, 8, 'Justificación:', true, [0.18, 0.21, 0.27]);
+        $this->drawClippedText($stream, 98, $requestBoxY + 50, 8, $requestJustification !== '' ? $requestJustification : 'Sin justificación registrada.', 459, [0.18, 0.21, 0.27]);
+        $this->drawText($stream, 42, $requestBoxY + 34, 8, 'Adjuntos:', true, [0.18, 0.21, 0.27]);
+        $this->drawClippedText($stream, 98, $requestBoxY + 34, 8, !empty($attachmentSummary) ? implode(', ', $attachmentSummary) : 'Sin archivos adjuntos en la solicitud.', 459, [0.18, 0.21, 0.27]);
 
         $pdf = $this->buildPdf(implode("\n", $stream), $logoData, $logoWidth, $logoHeight);
         file_put_contents($fullPath, $pdf);

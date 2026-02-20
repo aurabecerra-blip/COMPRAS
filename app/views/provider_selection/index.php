@@ -13,6 +13,29 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
 <h3>Cotizaciones y Selección de Proveedor - PR #<?= (int)$pr['id'] ?></h3>
 <p class="text-muted"><?= htmlspecialchars($pr['title']) ?></p>
 
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>Detalle de la solicitud</h5>
+        <p class="mb-2"><strong>Descripción:</strong><br><?= nl2br(htmlspecialchars((string)($pr['description'] ?? 'Sin descripción registrada.'))) ?></p>
+        <p class="mb-3"><strong>Justificación:</strong><br><?= nl2br(htmlspecialchars((string)($pr['justification'] ?? 'Sin justificación registrada.'))) ?></p>
+
+        <h6>Archivos de la solicitud</h6>
+        <?php if (!empty($requestAttachments ?? [])): ?>
+            <ul class="mb-0">
+                <?php foreach ($requestAttachments as $attachment): ?>
+                    <li>
+                        <a href="<?= htmlspecialchars((string)$attachment['file_path']) ?>" target="_blank"><?= htmlspecialchars((string)$attachment['original_name']) ?></a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p class="text-muted mb-0">No hay archivos adjuntos en la solicitud.</p>
+        <?php endif; ?>
+    </div>
+</div>
+
+
 <div class="card mb-3">
     <div class="card-body">
         <h5>Agregar cotización</h5>
