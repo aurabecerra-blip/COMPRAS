@@ -99,13 +99,19 @@ class ProviderSelectionController
             $providersById[(int)$provider['id']] = $provider;
         }
 
-        $pdfPath = $this->pdf->generateProviderSelectionPdf([
-            'purchase_request' => $pr ?? ['id' => $purchaseRequestId, 'title' => 'N/D'],
-            'scores' => $scores,
-            'criteria' => $this->selectionCriteria(),
-            'winner_name' => $providersById[$winner['winner_provider_id']]['name'] ?? 'N/D',
-            'observations' => trim((string)($_POST['observations'] ?? '')),
-        ]);
+        $pdfPath = null;
+        $pdfError = null;
+        try {
+            $pdfPath = $this->pdf->generateProviderSelectionPdf([
+                'purchase_request' => $pr ?? ['id' => $purchaseRequestId, 'title' => 'N/D'],
+                'scores' => $scores,
+                'criteria' => $this->selectionCriteria(),
+                'winner_name' => $providersById[$winner['winner_provider_id']]['name'] ?? 'N/D',
+                'observations' => trim((string)($_POST['observations'] ?? '')),
+            ]);
+        } catch (Throwable $e) {
+            $pdfError = $e->getMessage();
+        }
 
         $this->selections->closeEvaluation((int)$evaluation['id'], [
             'closed_by' => (int)$this->auth->user()['id'],
@@ -121,9 +127,14 @@ class ProviderSelectionController
             'purchase_request_id' => $purchaseRequestId,
             'winner_provider_id' => $winner['winner_provider_id'],
             'pdf_path' => $pdfPath,
+            'pdf_error' => $pdfError,
         ]);
 
-        $this->flash->add('success', 'Evaluación cerrada y proveedor ganador seleccionado.');
+        if ($pdfError !== null) {
+            $this->flash->add('warning', 'Evaluación cerrada y proveedor ganador seleccionado, pero no fue posible generar el PDF automáticamente.');
+        } else {
+            $this->flash->add('success', 'Evaluación cerrada y proveedor ganador seleccionado.');
+        }
         header('Location: ' . route_to('provider_selection', ['id' => $purchaseRequestId]));
     }
 
