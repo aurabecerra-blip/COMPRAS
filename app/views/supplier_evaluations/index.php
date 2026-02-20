@@ -18,6 +18,9 @@ if ($showId > 0) {
         <p class="text-muted mb-0">Registro histórico por proveedor y fecha con cálculo ponderado automático.</p>
         <p class="text-muted mb-0 small">Puntaje mínimo para aprobar: <strong>80%</strong>.</p>
     </div>
+    <a class="btn btn-outline-success" href="<?= htmlspecialchars(route_to('supplier_evaluations_export')) ?>">
+        <i class="bi bi-file-earmark-excel"></i> Exportar evaluaciones (Excel)
+    </a>
 </div>
 
 <div class="row g-3 mb-3">
@@ -149,6 +152,7 @@ if ($showId > 0) {
                                 <th class="text-end">Puntaje</th>
                                 <th>Estado</th>
                                 <th>PDF</th>
+                                <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -170,10 +174,16 @@ if ($showId > 0) {
                                             <span class="text-muted small">N/D</span>
                                         <?php endif; ?>
                                     </td>
+                                    <td class="text-end">
+                                        <form method="post" action="<?= htmlspecialchars(route_to('supplier_evaluation_delete')) ?>" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta evaluación? Esta acción no se puede deshacer.');">
+                                            <input type="hidden" name="id" value="<?= (int)$evaluation['id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                        </form>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (!$evaluations): ?>
-                                <tr><td colspan="6" class="text-center text-muted">Sin evaluaciones registradas.</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted">Sin evaluaciones registradas.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
