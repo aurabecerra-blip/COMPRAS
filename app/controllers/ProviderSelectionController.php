@@ -6,6 +6,7 @@ class ProviderSelectionController
         private SupplierRepository $suppliers,
         private ProviderQuoteRepository $quotes,
         private ProviderSelectionRepository $selections,
+        private AttachmentRepository $attachments,
         private ProviderSelectionScoringService $scoring,
         private PdfGeneratorService $pdf,
         private AuditLogger $audit,
@@ -102,8 +103,10 @@ class ProviderSelectionController
         $pdfPath = null;
         $pdfError = null;
         try {
+            $requestAttachments = $this->attachments->forEntity('purchase_request', $purchaseRequestId);
             $pdfPath = $this->pdf->generateProviderSelectionPdf([
                 'purchase_request' => $pr ?? ['id' => $purchaseRequestId, 'title' => 'N/D'],
+                'request_attachments' => $requestAttachments,
                 'scores' => $scores,
                 'criteria' => $this->selectionCriteria(),
                 'winner_name' => $providersById[$winner['winner_provider_id']]['name'] ?? 'N/D',
@@ -188,6 +191,7 @@ class ProviderSelectionController
 
         $pr = $this->purchaseRequests->find($purchaseRequestId) ?: ['id' => $purchaseRequestId, 'title' => 'N/D'];
         $scores = $this->selections->scores((int)$evaluation['id']);
+        $requestAttachments = $this->attachments->forEntity('purchase_request', $purchaseRequestId);
 
         $allProviders = $this->suppliers->all();
         $providersById = [];
@@ -196,10 +200,12 @@ class ProviderSelectionController
         }
 
         $winnerProviderId = (int)($evaluation['winner_provider_id'] ?? 0);
-        $winnerName = $providersById[$winnerProviderId] ?? ((string)($scores[0]['provider_name'] ?? 'N/D'));
+        $firstScore = $scores[0] ?? [];
+        $winnerName = $providersById[$winnerProviderId] ?? ((string)($firstScore['provider_name'] ?? 'N/D'));
 
         $pdfPath = $this->pdf->generateProviderSelectionPdf([
             'purchase_request' => $pr,
+            'request_attachments' => $requestAttachments,
             'scores' => $scores,
             'criteria' => $this->selectionCriteria(),
             'winner_name' => $winnerName,

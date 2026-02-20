@@ -6,6 +6,7 @@ class ProviderQuoteController
         private PurchaseRequestRepository $purchaseRequests,
         private SupplierRepository $suppliers,
         private ProviderSelectionRepository $selections,
+        private AttachmentRepository $attachments,
         private AuditLogger $audit,
         private Auth $auth,
         private Flash $flash,
@@ -30,6 +31,7 @@ class ProviderQuoteController
         $quotes = $this->quotes->forPurchaseRequest($purchaseRequestId);
         $latestQuotesByProvider = $this->quotes->latestQuotesByProvider($purchaseRequestId);
         $files = $this->quotes->filesByPurchaseRequest($purchaseRequestId);
+        $requestAttachments = $this->attachments->forEntity('purchase_request', $purchaseRequestId);
         $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
 
         include __DIR__ . '/../views/provider_selection/index.php';
