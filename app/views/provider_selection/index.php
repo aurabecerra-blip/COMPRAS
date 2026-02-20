@@ -121,6 +121,34 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
         </table>
 
         <?php if (!empty($files)): ?>
+            <?php
+            $pdfHistory = array_values(array_filter($files, static function (array $file): bool {
+                $path = strtolower((string)($file['file_path'] ?? ''));
+                $name = strtolower((string)($file['original_name'] ?? ''));
+
+                return str_ends_with($path, '.pdf') || str_ends_with($name, '.pdf');
+            }));
+            ?>
+
+            <?php if (!empty($pdfHistory)): ?>
+                <h6>Historial de PDFs de cotización</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle">
+                        <thead><tr><th>Fecha</th><th>Proveedor</th><th>Cotización</th><th>Archivo PDF</th></tr></thead>
+                        <tbody>
+                        <?php foreach ($pdfHistory as $pdf): ?>
+                            <tr>
+                                <td><?= htmlspecialchars((string)($pdf['created_at'] ?? '')) ?></td>
+                                <td><?= htmlspecialchars((string)($pdf['provider_name'] ?? '')) ?></td>
+                                <td>#<?= (int)($pdf['quote_id'] ?? 0) ?></td>
+                                <td><a href="<?= htmlspecialchars((string)($pdf['file_path'] ?? '#')) ?>" target="_blank"><?= htmlspecialchars((string)($pdf['original_name'] ?? 'PDF')) ?></a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+
             <h6>Archivos anexos</h6>
             <ul>
                 <?php foreach ($files as $file): ?>

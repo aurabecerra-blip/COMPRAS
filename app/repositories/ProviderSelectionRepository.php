@@ -1,6 +1,8 @@
 <?php
 class ProviderSelectionRepository
 {
+    private ?bool $hasPdfPathColumn = null;
+
     public function __construct(private Database $db)
     {
     }
@@ -101,9 +103,26 @@ class ProviderSelectionRepository
 
     public function closeEvaluation(int $evaluationId, array $closeData): void
     {
+        if ($this->supportsPdfPathColumn()) {
+            $stmt = $this->db->pdo()->prepare(
+                'UPDATE provider_selection_evaluations
+                 SET status = "CLOSED", closed_at = NOW(), closed_by = ?, winner_provider_id = ?, tie_break_reason = ?, observations = ?, pdf_path = ?, updated_at = NOW()
+                 WHERE id = ?'
+            );
+            $stmt->execute([
+                $closeData['closed_by'],
+                $closeData['winner_provider_id'],
+                $closeData['tie_break_reason'],
+                $closeData['observations'],
+                $closeData['pdf_path'],
+                $evaluationId,
+            ]);
+            return;
+        }
+
         $stmt = $this->db->pdo()->prepare(
             'UPDATE provider_selection_evaluations
-             SET status = "CLOSED", closed_at = NOW(), closed_by = ?, winner_provider_id = ?, tie_break_reason = ?, observations = ?, pdf_path = ?, updated_at = NOW()
+             SET status = "CLOSED", closed_at = NOW(), closed_by = ?, winner_provider_id = ?, tie_break_reason = ?, observations = ?, updated_at = NOW()
              WHERE id = ?'
         );
         $stmt->execute([
@@ -111,7 +130,6 @@ class ProviderSelectionRepository
             $closeData['winner_provider_id'],
             $closeData['tie_break_reason'],
             $closeData['observations'],
-            $closeData['pdf_path'],
             $evaluationId,
         ]);
     }
@@ -124,7 +142,24 @@ class ProviderSelectionRepository
 
     public function updatePdfPath(int $evaluationId, string $pdfPath): void
     {
+        if (!$this->supportsPdfPathColumn()) {
+            return;
+        }
+
         $stmt = $this->db->pdo()->prepare('UPDATE provider_selection_evaluations SET pdf_path = ?, updated_at = NOW() WHERE id = ?');
         $stmt->execute([$pdfPath, $evaluationId]);
+    }
+
+    private function supportsPdfPathColumn(): bool
+    {
+        if ($this->hasPdfPathColumn !== null) {
+            return $this->hasPdfPathColumn;
+        }
+
+        $stmt = $this->db->pdo()->prepare('SHOW COLUMNS FROM provider_selection_evaluations LIKE ?');
+        $stmt->execute(['pdf_path']);
+        $this->hasPdfPathColumn = (bool)$stmt->fetch();
+
+        return $this->hasPdfPathColumn;
     }
 }
