@@ -67,6 +67,20 @@ class PdfGeneratorService
             }
         }
 
+        $quotationAttachments = array_values($context['quote_attachments'] ?? []);
+        $quotationSummary = [];
+        foreach ($quotationAttachments as $attachment) {
+            $provider = trim((string)($attachment['provider_name'] ?? 'Proveedor'));
+            $name = trim((string)($attachment['original_name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            if (!isset($quotationSummary[$provider])) {
+                $quotationSummary[$provider] = [];
+            }
+            $quotationSummary[$provider][] = $name;
+        }
+
         $stream = [];
         $stream[] = '0.96 0.97 1.00 rg';
         $stream[] = '30 730 535 95 re f';
@@ -155,18 +169,33 @@ class PdfGeneratorService
         $stream[] = '0.95 0.97 1.00 rg';
         $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $obsY, 535, 52);
         $this->drawText($stream, 42, $obsY + 35, 9, 'COMENTARIOS / OBSERVACIONES', true, [0.11, 0.19, 0.42]);
-        $this->drawClippedText($stream, 42, $obsY + 18, 8, $observations !== '' ? $observations : 'Sin observaciones registradas.', 515, [0.18, 0.21, 0.27]);
+        $this->drawWrappedText($stream, 42, $obsY + 18, 8, $observations !== '' ? $observations : 'Sin observaciones registradas.', 515, [0.18, 0.21, 0.27], false, 2);
 
-        $requestBoxY = $obsY - 112;
+        $requestBoxY = $obsY - 182;
         $stream[] = '0.98 0.99 1.00 rg';
-        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $requestBoxY, 535, 98);
-        $this->drawText($stream, 42, $requestBoxY + 82, 9, 'DETALLE DE SOLICITUD', true, [0.11, 0.19, 0.42]);
-        $this->drawText($stream, 42, $requestBoxY + 66, 8, 'Descripción:', true, [0.18, 0.21, 0.27]);
-        $this->drawClippedText($stream, 98, $requestBoxY + 66, 8, $requestDescription !== '' ? $requestDescription : 'Sin descripción registrada.', 459, [0.18, 0.21, 0.27]);
-        $this->drawText($stream, 42, $requestBoxY + 50, 8, 'Justificación:', true, [0.18, 0.21, 0.27]);
-        $this->drawClippedText($stream, 98, $requestBoxY + 50, 8, $requestJustification !== '' ? $requestJustification : 'Sin justificación registrada.', 459, [0.18, 0.21, 0.27]);
-        $this->drawText($stream, 42, $requestBoxY + 34, 8, 'Adjuntos:', true, [0.18, 0.21, 0.27]);
-        $this->drawClippedText($stream, 98, $requestBoxY + 34, 8, !empty($attachmentSummary) ? implode(', ', $attachmentSummary) : 'Sin archivos adjuntos en la solicitud.', 459, [0.18, 0.21, 0.27]);
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $requestBoxY, 535, 168);
+        $this->drawText($stream, 42, $requestBoxY + 152, 9, 'DETALLE DE SOLICITUD', true, [0.11, 0.19, 0.42]);
+        $this->drawText($stream, 42, $requestBoxY + 136, 8, 'Descripción:', true, [0.18, 0.21, 0.27]);
+        $this->drawWrappedText($stream, 98, $requestBoxY + 136, 8, $requestDescription !== '' ? $requestDescription : 'Sin descripción registrada.', 459, [0.18, 0.21, 0.27], false, 3);
+        $this->drawText($stream, 42, $requestBoxY + 102, 8, 'Justificación:', true, [0.18, 0.21, 0.27]);
+        $this->drawWrappedText($stream, 98, $requestBoxY + 102, 8, $requestJustification !== '' ? $requestJustification : 'Sin justificación registrada.', 459, [0.18, 0.21, 0.27], false, 3);
+        $this->drawText($stream, 42, $requestBoxY + 68, 8, 'Adjuntos solicitud:', true, [0.18, 0.21, 0.27]);
+        $this->drawWrappedText($stream, 128, $requestBoxY + 68, 8, !empty($attachmentSummary) ? implode(', ', $attachmentSummary) : 'Sin archivos adjuntos en la solicitud.', 429, [0.18, 0.21, 0.27], false, 2);
+
+        $this->drawText($stream, 42, $requestBoxY + 42, 8, 'Adjuntos cotizaciones:', true, [0.18, 0.21, 0.27]);
+        if (!empty($quotationSummary)) {
+            $quoteLineY = $requestBoxY + 42;
+            foreach ($quotationSummary as $provider => $files) {
+                if ($quoteLineY <= $requestBoxY + 8) {
+                    break;
+                }
+                $line = $provider . ': ' . implode(', ', $files);
+                $this->drawWrappedText($stream, 138, $quoteLineY, 8, $line, 419, [0.18, 0.21, 0.27], false, 1);
+                $quoteLineY -= 12;
+            }
+        } else {
+            $this->drawWrappedText($stream, 138, $requestBoxY + 42, 8, 'Sin archivos adjuntos en cotizaciones.', 419, [0.18, 0.21, 0.27], false, 1);
+        }
 
         $pdf = $this->buildPdf(implode("\n", $stream), $logoData, $logoWidth, $logoHeight);
         file_put_contents($fullPath, $pdf);
@@ -283,7 +312,7 @@ class PdfGeneratorService
 
         $suffix = '…';
         while ($text !== '' && $this->textWidth($text . $suffix, $size, $bold) > $maxWidth) {
-            $text = mb_substr($text, 0, max(0, mb_strlen($text) - 1));
+            $text = $this->stringSubstr($text, 0, max(0, $this->stringLength($text) - 1));
         }
 
         return rtrim($text) . $suffix;
@@ -292,7 +321,74 @@ class PdfGeneratorService
     private function textWidth(string $text, int $size, bool $bold = false): float
     {
         $multiplier = $bold ? 0.56 : 0.52;
-        return mb_strlen($text) * ($size * $multiplier);
+        return $this->stringLength($text) * ($size * $multiplier);
+    }
+
+    private function drawWrappedText(array &$stream, float $x, float $y, int $size, string $text, float $maxWidth, array $rgb = [0, 0, 0], bool $bold = false, int $maxLines = 1): void
+    {
+        $lines = $this->wrapText($text, $size, $maxWidth, $bold, $maxLines);
+        foreach ($lines as $index => $line) {
+            $this->drawText($stream, $x, $y - ($index * 12), $size, $line, $bold, $rgb);
+        }
+    }
+
+    private function wrapText(string $text, int $size, float $maxWidth, bool $bold, int $maxLines): array
+    {
+        $normalized = trim((string)(preg_replace('/\s+/', ' ', $text) ?? ''));
+        if ($normalized === '') {
+            return [''];
+        }
+
+        $words = preg_split('/\s+/', $normalized) ?: [];
+        $lines = [];
+        $currentLine = '';
+        foreach ($words as $word) {
+            $candidate = $currentLine === '' ? $word : ($currentLine . ' ' . $word);
+            if ($this->textWidth($candidate, $size, $bold) <= $maxWidth) {
+                $currentLine = $candidate;
+                continue;
+            }
+
+            if ($currentLine !== '') {
+                $lines[] = $currentLine;
+            }
+            $currentLine = $word;
+            if (count($lines) >= $maxLines) {
+                break;
+            }
+        }
+
+        if (count($lines) < $maxLines && $currentLine !== '') {
+            $lines[] = $currentLine;
+        }
+
+        if (count($lines) > $maxLines) {
+            $lines = array_slice($lines, 0, $maxLines);
+        }
+
+        if (count($lines) === $maxLines && implode(' ', $lines) !== $normalized) {
+            $lines[$maxLines - 1] = $this->truncateText($lines[$maxLines - 1], $size, $maxWidth, $bold);
+        }
+
+        return $lines;
+    }
+
+    private function stringLength(string $text): int
+    {
+        if (function_exists('mb_strlen')) {
+            return (int)mb_strlen($text);
+        }
+
+        return strlen($text);
+    }
+
+    private function stringSubstr(string $text, int $start, int $length): string
+    {
+        if (function_exists('mb_substr')) {
+            return (string)mb_substr($text, $start, $length);
+        }
+
+        return (string)substr($text, $start, $length);
     }
 
     private function buildPdf(string $stream, string $logoData, int $logoWidth, int $logoHeight): string

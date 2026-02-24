@@ -104,9 +104,11 @@ class ProviderSelectionController
         $pdfError = null;
         try {
             $requestAttachments = $this->attachments->forEntity('purchase_request', $purchaseRequestId);
+            $quotationAttachments = $this->quotes->filesByPurchaseRequest($purchaseRequestId);
             $pdfPath = $this->pdf->generateProviderSelectionPdf([
                 'purchase_request' => $pr ?? ['id' => $purchaseRequestId, 'title' => 'N/D'],
                 'request_attachments' => $requestAttachments,
+                'quote_attachments' => $quotationAttachments,
                 'scores' => $scores,
                 'criteria' => $this->selectionCriteria(),
                 'winner_name' => $providersById[$winner['winner_provider_id']]['name'] ?? 'N/D',
@@ -192,6 +194,7 @@ class ProviderSelectionController
         $pr = $this->purchaseRequests->find($purchaseRequestId) ?: ['id' => $purchaseRequestId, 'title' => 'N/D'];
         $scores = $this->selections->scores((int)$evaluation['id']);
         $requestAttachments = $this->attachments->forEntity('purchase_request', $purchaseRequestId);
+        $quotationAttachments = $this->quotes->filesByPurchaseRequest($purchaseRequestId);
 
         $allProviders = $this->suppliers->all();
         $providersById = [];
@@ -206,6 +209,7 @@ class ProviderSelectionController
         $pdfPath = $this->pdf->generateProviderSelectionPdf([
             'purchase_request' => $pr,
             'request_attachments' => $requestAttachments,
+            'quote_attachments' => $quotationAttachments,
             'scores' => $scores,
             'criteria' => $this->selectionCriteria(),
             'winner_name' => $winnerName,
