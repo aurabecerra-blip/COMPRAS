@@ -206,6 +206,9 @@ switch ($page) {
     case 'provider_quote_store':
         $providerQuoteController->store();
         break;
+    case 'provider_quote_delete':
+        $providerQuoteController->delete();
+        break;
     case 'provider_selection_evaluate':
         $providerSelectionController->evaluate();
         break;

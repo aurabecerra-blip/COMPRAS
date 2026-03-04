@@ -150,6 +150,27 @@ class ProviderSelectionRepository
         $stmt->execute([$pdfPath, $evaluationId]);
     }
 
+    public function deleteScoreByProvider(int $evaluationId, int $providerId): void
+    {
+        $stmt = $this->db->pdo()->prepare('DELETE FROM provider_selection_scores WHERE evaluation_id = ? AND provider_id = ?');
+        $stmt->execute([$evaluationId, $providerId]);
+    }
+
+    public function deleteScoresNotInProviders(int $evaluationId, array $providerIds): void
+    {
+        $providerIds = array_values(array_unique(array_map('intval', $providerIds)));
+        if (empty($providerIds)) {
+            $stmt = $this->db->pdo()->prepare('DELETE FROM provider_selection_scores WHERE evaluation_id = ?');
+            $stmt->execute([$evaluationId]);
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($providerIds), '?'));
+        $params = array_merge([$evaluationId], $providerIds);
+        $stmt = $this->db->pdo()->prepare("DELETE FROM provider_selection_scores WHERE evaluation_id = ? AND provider_id NOT IN ($placeholders)");
+        $stmt->execute($params);
+    }
+
     private function supportsPdfPathColumn(): bool
     {
         if ($this->hasPdfPathColumn !== null) {

@@ -44,7 +44,7 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
             <div class="row g-2">
                 <div class="col-md-4">
                     <label class="form-label">Proveedor (editable)</label>
-                    <input class="form-control" list="providersList" name="provider_name" placeholder="Escribe el nombre del proveedor" required>
+                    <input class="form-control" list="providersList" name="provider_name" value="<?= htmlspecialchars($prefillProviderName ?? '') ?>" placeholder="Escribe el nombre del proveedor" required>
                     <datalist id="providersList">
                         <?php foreach ($providers as $provider): ?>
                             <option value="<?= htmlspecialchars($provider['name']) ?>"></option>
@@ -126,7 +126,7 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
     <div class="card-body">
         <h5>Listado de cotizaciones</h5>
         <table class="table table-sm">
-            <thead><tr><th>Proveedor</th><th>Tipo</th><th>Valor</th><th>Experiencia</th><th>Entrega</th><th>Pago</th><th>Re-cot.</th><th>Archivos</th></tr></thead>
+            <thead><tr><th>Proveedor</th><th>Tipo</th><th>Valor</th><th>Experiencia</th><th>Entrega</th><th>Pago</th><th>Re-cot.</th><th>Archivos</th><th>Acciones</th></tr></thead>
             <tbody>
             <?php foreach ($quotes as $quote): ?>
                 <tr>
@@ -138,6 +138,13 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
                     <td><?= htmlspecialchars($quote['forma_pago']) ?></td>
                     <td><?= (int)$quote['recotizacion'] === 1 ? 'Sí' : 'No' ?></td>
                     <td><?= (int)$quote['file_count'] ?></td>
+                    <td>
+                        <form method="post" action="<?= htmlspecialchars(route_to('provider_quote_delete')) ?>" class="d-inline" onsubmit="return confirm('¿Eliminar esta cotización? Luego podrás volver a cargarla para este proveedor.');">
+                            <input type="hidden" name="purchase_request_id" value="<?= (int)$pr['id'] ?>">
+                            <input type="hidden" name="quote_id" value="<?= (int)$quote['id'] ?>">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                        </form>
+                    </td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -193,36 +200,35 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
             <strong>Regla de negocio:</strong> el mínimo recomendado es <strong>75 puntos</strong>. Si seleccionas por debajo de ese valor, debes justificarlo.
         </div>
 
-        <form method="post" action="<?= htmlspecialchars(route_to('provider_selection_scores_update')) ?>">
-            <input type="hidden" name="purchase_request_id" value="<?= (int)$pr['id'] ?>">
-            <table class="table table-bordered table-sm align-middle">
-                <thead>
+        <div class="alert alert-secondary py-2 mb-3">
+            Los puntajes se recalculan automáticamente con la última cotización registrada por proveedor. Si te equivocas, elimina la cotización y vuelve a cargarla.
+        </div>
+        <table class="table table-bordered table-sm align-middle">
+            <thead>
+            <tr>
+                <th>Proveedor</th><th>Precio</th><th>Precios (25%)</th><th>Exp. (15%)</th><th>Entrega (20%)</th><th>Pago (25%)</th><th>Desc. (5%)</th><th>Cert. (10%)</th><th>Total</th><th>Obs.</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach (($evaluation['scores'] ?? []) as $score):
+                $providerId = (int)$score['provider_id'];
+                $quote = $quotesByProvider[$providerId] ?? null;
+            ?>
                 <tr>
-                    <th>Proveedor</th><th>Precio</th><th>Precios (25%)</th><th>Exp. (15%)</th><th>Entrega (20%)</th><th>Pago (25%)</th><th>Desc. (5%)</th><th>Cert. (10%)</th><th>Total</th><th>Obs.</th>
+                    <td><?= htmlspecialchars((string)$score['provider_name']) ?></td>
+                    <td><?= htmlspecialchars((string)($quote['moneda'] ?? 'COP')) ?> $<?= number_format((float)($quote['valor'] ?? 0), 2) ?></td>
+                    <td><?= (int)$score['precios_score'] ?></td>
+                    <td><?= (int)$score['experiencia_score'] ?></td>
+                    <td><?= (int)$score['entrega_score'] ?></td>
+                    <td><?= (int)$score['forma_pago_score'] ?></td>
+                    <td><?= (int)$score['descuento_score'] ?></td>
+                    <td><?= (int)$score['certificaciones_score'] ?></td>
+                    <td><strong><?= (int)$score['total_score'] ?></strong></td>
+                    <td><?= htmlspecialchars((string)($score['observations'] ?? '')) ?></td>
                 </tr>
-                </thead>
-                <tbody>
-                <?php foreach (($evaluation['scores'] ?? []) as $score):
-                    $providerId = (int)$score['provider_id'];
-                    $quote = $quotesByProvider[$providerId] ?? null;
-                ?>
-                    <tr>
-                        <td><?= htmlspecialchars((string)$score['provider_name']) ?></td>
-                        <td><?= htmlspecialchars((string)($quote['moneda'] ?? 'COP')) ?> $<?= number_format((float)($quote['valor'] ?? 0), 2) ?></td>
-                        <td><input type="number" class="form-control form-control-sm" min="0" max="25" name="precios_score_<?= $providerId ?>" value="<?= (int)$score['precios_score'] ?>"></td>
-                        <td><input type="number" class="form-control form-control-sm" min="0" max="15" name="experiencia_score_<?= $providerId ?>" value="<?= (int)$score['experiencia_score'] ?>"></td>
-                        <td><input type="number" class="form-control form-control-sm" min="0" max="20" name="entrega_score_<?= $providerId ?>" value="<?= (int)$score['entrega_score'] ?>"></td>
-                        <td><input type="number" class="form-control form-control-sm" min="0" max="25" name="forma_pago_score_<?= $providerId ?>" value="<?= (int)$score['forma_pago_score'] ?>"></td>
-                        <td><input type="number" class="form-control form-control-sm" min="0" max="5" name="descuento_score_<?= $providerId ?>" value="<?= (int)$score['descuento_score'] ?>"></td>
-                        <td><input type="number" class="form-control form-control-sm" min="0" max="10" name="certificaciones_score_<?= $providerId ?>" value="<?= (int)$score['certificaciones_score'] ?>"></td>
-                        <td><strong><?= (int)$score['total_score'] ?></strong></td>
-                        <td><input type="text" class="form-control form-control-sm" name="score_observations_<?= $providerId ?>" value="<?= htmlspecialchars((string)($score['observations'] ?? '')) ?>"></td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-            <button class="btn btn-outline-secondary mb-2">Guardar puntajes editados</button>
-        </form>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
 
         <form method="post" action="<?= htmlspecialchars(route_to('provider_selection_evaluate')) ?>">
             <input type="hidden" name="purchase_request_id" value="<?= (int)$pr['id'] ?>">

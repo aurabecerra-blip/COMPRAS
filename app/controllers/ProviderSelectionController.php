@@ -286,7 +286,7 @@ class ProviderSelectionController
             return '';
         }
 
-        if ($trimmed[0] !== '/' && is_file($trimmed)) {
+        if (is_file($trimmed)) {
             return $trimmed;
         }
 
