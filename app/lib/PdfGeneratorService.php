@@ -8,10 +8,7 @@ class PdfGeneratorService
     public function generateProviderSelectionPdf(array $context): string
     {
         $prId = (int)($context['purchase_request']['id'] ?? 0);
-        $dir = __DIR__ . '/../../public/storage/seleccion_proveedor/' . $prId;
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
+        $dir = $this->resolveSelectionDirectory($prId);
 
         $filename = 'analisis_seleccion_' . date('Ymd_His') . '.pdf';
         $fullPath = $dir . '/' . $filename;
@@ -201,6 +198,33 @@ class PdfGeneratorService
         file_put_contents($fullPath, $pdf);
 
         return '/storage/seleccion_proveedor/' . $prId . '/' . $filename;
+    }
+
+
+
+    private function resolveSelectionDirectory(int $prId): string
+    {
+        $relative = '/storage/seleccion_proveedor/' . $prId;
+        $candidates = [];
+
+        $documentRoot = trim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($documentRoot !== '') {
+            $candidates[] = rtrim($documentRoot, '/\\') . $relative;
+        }
+
+        $candidates[] = __DIR__ . '/../../public' . $relative;
+
+        foreach ($candidates as $candidate) {
+            if (!is_dir($candidate)) {
+                @mkdir($candidate, 0775, true);
+            }
+
+            if (is_dir($candidate) && is_writable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException('No se encontró una ruta pública escribible para /storage/seleccion_proveedor.');
     }
 
     private function brandData(): array

@@ -36,7 +36,7 @@
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead class="table-light">
-                    <tr><th>Nombre</th><th>NIT</th><th>Servicio</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th class="text-center">Cotizaciones</th><th class="text-center">OC</th><th class="text-center">OC Abiertas</th><th class="text-end">Monto OC</th><th class="text-end">Lead time prom.</th><th class="text-end">Acciones</th></tr>
+                    <tr><th>Nombre</th><th>NIT</th><th>Servicio</th><th>Líder</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th class="text-center">Cotizaciones</th><th class="text-center">OC</th><th class="text-center">OC Abiertas</th><th class="text-end">Monto OC</th><th class="text-end">Lead time prom.</th><th class="text-end">Acciones</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $s): ?>
@@ -44,6 +44,7 @@
                             <td class="fw-semibold"><?= htmlspecialchars($s['name']) ?></td>
                             <td><?= htmlspecialchars($s['nit'] ?? '') ?></td>
                             <td><?= htmlspecialchars($s['service'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($s['leader_name'] ?? 'Sin asignar') ?></td>
                             <td><?= htmlspecialchars($s['contact']) ?></td>
                             <td><?= htmlspecialchars($s['email']) ?></td>
                             <td><?= htmlspecialchars($s['phone']) ?></td>
@@ -82,6 +83,14 @@
                         <div class="col-md-3"><input type="text" name="contact" class="form-control" placeholder="Contacto"></div>
                         <div class="col-md-3"><input type="email" name="email" class="form-control" placeholder="Email"></div>
                         <div class="col-md-3"><input type="text" name="phone" class="form-control" placeholder="Teléfono"></div>
+                        <div class="col-md-6">
+                            <select name="leader_user_id" class="form-select">
+                                <option value="0">Líder asignado (opcional)</option>
+                                <?php foreach (($leaders ?? []) as $leader): ?>
+                                    <option value="<?= (int)$leader['id'] ?>"><?= htmlspecialchars($leader['name']) ?> (<?= htmlspecialchars($leader['role']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
                     <button class="btn btn-primary"><i class="bi bi-save"></i> Guardar</button>
                 </form>
@@ -121,6 +130,14 @@
                             <div class="col-md-6"><label class="form-label">Contacto</label><input type="text" name="contact" class="form-control" value="<?= htmlspecialchars($s['contact'] ?? '') ?>"></div>
                             <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="<?= htmlspecialchars($s['email'] ?? '') ?>"></div>
                             <div class="col-md-6"><label class="form-label">Teléfono</label><input type="text" name="phone" class="form-control" value="<?= htmlspecialchars($s['phone'] ?? '') ?>"></div>
+                            <div class="col-md-6"><label class="form-label">Líder asignado</label>
+                                <select name="leader_user_id" class="form-select">
+                                    <option value="0">Sin asignar</option>
+                                    <?php foreach (($leaders ?? []) as $leader): ?>
+                                        <option value="<?= (int)$leader['id'] ?>" <?= ((int)($s['leader_user_id'] ?? 0) === (int)$leader['id']) ? 'selected' : '' ?>><?= htmlspecialchars($leader['name']) ?> (<?= htmlspecialchars($leader['role']) ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
