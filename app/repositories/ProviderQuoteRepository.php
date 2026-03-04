@@ -151,4 +151,23 @@ class ProviderQuoteRepository
             $file['uploaded_by'],
         ]);
     }
+
+    public function filesByQuote(int $quoteId): array
+    {
+        $stmt = $this->db->pdo()->prepare('SELECT * FROM provider_quote_files WHERE quote_id = ? ORDER BY created_at DESC');
+        $stmt->execute([$quoteId]);
+        return $stmt->fetchAll();
+    }
+
+    public function deleteFilesByQuote(int $quoteId): void
+    {
+        $stmt = $this->db->pdo()->prepare('DELETE FROM provider_quote_files WHERE quote_id = ?');
+        $stmt->execute([$quoteId]);
+    }
+
+    public function delete(int $quoteId): void
+    {
+        $stmt = $this->db->pdo()->prepare('DELETE FROM provider_quotes WHERE id = ?');
+        $stmt->execute([$quoteId]);
+    }
 }

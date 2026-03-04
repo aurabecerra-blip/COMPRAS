@@ -197,7 +197,11 @@ class PdfGeneratorService
         $pdf = $this->buildPdf(implode("\n", $stream), $logoData, $logoWidth, $logoHeight);
         file_put_contents($fullPath, $pdf);
 
-        return '/storage/seleccion_proveedor/' . $prId . '/' . $filename;
+        if (preg_match('#(/storage/seleccion_proveedor/' . $prId . '/' . preg_quote($filename, '#') . ')$#', str_replace('\\', '/', $fullPath), $matches)) {
+            return $matches[1];
+        }
+
+        return $fullPath;
     }
 
 
@@ -213,6 +217,8 @@ class PdfGeneratorService
         }
 
         $candidates[] = __DIR__ . '/../../public' . $relative;
+        $candidates[] = __DIR__ . '/../../storage/seleccion_proveedor/' . $prId;
+        $candidates[] = rtrim(sys_get_temp_dir(), '/\\') . '/compras/seleccion_proveedor/' . $prId;
 
         foreach ($candidates as $candidate) {
             if (!is_dir($candidate)) {
@@ -224,7 +230,7 @@ class PdfGeneratorService
             }
         }
 
-        throw new RuntimeException('No se encontró una ruta pública escribible para /storage/seleccion_proveedor.');
+        throw new RuntimeException('No se encontró una ruta escribible para almacenar el PDF de selección.');
     }
 
     private function brandData(): array

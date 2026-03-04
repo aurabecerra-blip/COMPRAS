@@ -33,6 +33,7 @@ class ProviderQuoteController
         $files = $this->quotes->filesByPurchaseRequest($purchaseRequestId);
         $requestAttachments = $this->attachments->forEntity('purchase_request', $purchaseRequestId);
         $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
+        $prefillProviderName = trim((string)($_GET['provider_name'] ?? ''));
 
         include __DIR__ . '/../views/provider_selection/index.php';
     }
@@ -111,14 +112,7 @@ class ProviderQuoteController
         ]);
 
         $this->storeFiles($purchaseRequestId, $providerId, $quoteId);
-
-        $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
-        $autoScoring = new ProviderSelectionScoringService();
-        $latestQuotes = $this->quotes->latestQuotesByProvider($purchaseRequestId);
-        $scores = $autoScoring->buildScoresFromQuotes($latestQuotes);
-        foreach ($scores as $score) {
-            $this->selections->upsertScore((int)$evaluation['id'], (int)$score['provider_id'], $score, $score['detail'], null);
-        }
+        $this->syncScores($purchaseRequestId);
 
         $this->audit->log((int)$this->auth->user()['id'], 'provider_quote_create', [
             'purchase_request_id' => $purchaseRequestId,
@@ -128,6 +122,114 @@ class ProviderQuoteController
 
         $this->flash->add('success', 'Cotización registrada correctamente.');
         header('Location: ' . route_to('provider_selection', ['id' => $purchaseRequestId]));
+    }
+
+    public function delete(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['compras', 'administrador', 'lider']);
+
+        $purchaseRequestId = (int)($_POST['purchase_request_id'] ?? 0);
+        $quoteId = (int)($_POST['quote_id'] ?? 0);
+        if ($purchaseRequestId <= 0 || $quoteId <= 0) {
+            $this->unprocessable('Cotización inválida para eliminar.');
+            return;
+        }
+
+        $quote = $this->quotes->find($quoteId);
+        if (!$quote || (int)$quote['purchase_request_id'] !== $purchaseRequestId) {
+            $this->unprocessable('Cotización no encontrada.');
+            return;
+        }
+
+        $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
+        if (($evaluation['status'] ?? '') === 'CLOSED') {
+            $this->unprocessable('La evaluación ya está cerrada. No se pueden eliminar cotizaciones.');
+            return;
+        }
+
+        $quoteFiles = $this->quotes->filesByQuote($quoteId);
+        foreach ($quoteFiles as $file) {
+            $absolute = $this->resolveStoredFileAbsolutePath((string)($file['file_path'] ?? ''));
+            if ($absolute !== '' && is_file($absolute)) {
+                @unlink($absolute);
+            }
+        }
+
+        $this->quotes->deleteFilesByQuote($quoteId);
+        $this->quotes->delete($quoteId);
+        $this->syncScores($purchaseRequestId);
+
+        $this->audit->log((int)$this->auth->user()['id'], 'provider_quote_delete', [
+            'purchase_request_id' => $purchaseRequestId,
+            'provider_id' => (int)$quote['provider_id'],
+            'quote_id' => $quoteId,
+        ]);
+
+        $provider = $this->suppliers->find((int)$quote['provider_id']);
+
+        $this->flash->add('success', 'Cotización eliminada. Puedes volver a cargarla para el mismo proveedor.');
+        header('Location: ' . route_to('provider_selection', [
+            'id' => $purchaseRequestId,
+            'provider_name' => (string)($provider['name'] ?? ''),
+        ]));
+    }
+
+    private function syncScores(int $purchaseRequestId): void
+    {
+        $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
+        $latestQuotes = $this->quotes->latestQuotesByProvider($purchaseRequestId);
+        $autoScoring = new ProviderSelectionScoringService();
+        $scores = $autoScoring->buildScoresFromQuotes($latestQuotes);
+
+        $existingScores = $this->selections->scores((int)$evaluation['id']);
+        $observationsByProvider = [];
+        foreach ($existingScores as $existing) {
+            $observationsByProvider[(int)$existing['provider_id']] = trim((string)($existing['observations'] ?? '')) ?: null;
+        }
+
+        $activeProviderIds = [];
+        foreach ($scores as $score) {
+            $providerId = (int)$score['provider_id'];
+            $activeProviderIds[] = $providerId;
+            $this->selections->upsertScore(
+                (int)$evaluation['id'],
+                $providerId,
+                $score,
+                $score['detail'],
+                $observationsByProvider[$providerId] ?? null
+            );
+        }
+
+        $this->selections->deleteScoresNotInProviders((int)$evaluation['id'], $activeProviderIds);
+    }
+
+    private function resolveStoredFileAbsolutePath(string $filePath): string
+    {
+        $trimmed = trim($filePath);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        if (is_file($trimmed)) {
+            return $trimmed;
+        }
+
+        $normalizedPath = '/' . ltrim($trimmed, '/');
+        $candidate = __DIR__ . '/../../public' . $normalizedPath;
+        if (is_file($candidate)) {
+            return $candidate;
+        }
+
+        $documentRoot = trim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($documentRoot !== '') {
+            $candidate = rtrim($documentRoot, '/\\') . $normalizedPath;
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return '';
     }
 
     private function storeFiles(int $purchaseRequestId, int $providerId, int $quoteId): void
