@@ -52,6 +52,7 @@ class PdfGeneratorService
         ];
 
         $winner = (string)($context['winner_name'] ?? 'N/D');
+        $winnerJustification = trim((string)($context['winner_justification'] ?? ''));
         $observations = trim((string)($context['observations'] ?? ''));
         $requestDescription = trim((string)(($context['purchase_request']['description'] ?? '')));
         $requestJustification = trim((string)(($context['purchase_request']['justification'] ?? '')));
@@ -69,6 +70,9 @@ class PdfGeneratorService
         foreach ($quotationAttachments as $attachment) {
             $provider = trim((string)($attachment['provider_name'] ?? 'Proveedor'));
             $name = trim((string)($attachment['original_name'] ?? ''));
+            if ($name === '') {
+                $name = basename((string)($attachment['file_path'] ?? ''));
+            }
             if ($name === '') {
                 continue;
             }
@@ -157,41 +161,65 @@ class PdfGeneratorService
 
         $winnerY = $gridBottom - 52;
         $stream[] = sprintf('%.3f %.3f %.3f rg', $secondaryR, $secondaryG, $secondaryB);
-        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $winnerY, 535, 34);
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $winnerY, 535, 46);
         $this->drawText($stream, 42, $winnerY + 20, 10, 'GANADOR: ' . $winner, true, [0.22, 0.08, 0.19]);
-        $this->drawText($stream, 42, $winnerY + 8, 8, 'PROVEEDORES EVALUADOS: ' . implode(', ', array_filter($providerNames)), false, [0.22, 0.08, 0.19]);
-        $this->drawText($stream, 360, $winnerY + 8, 8, 'PUNTAJE MÍNIMO: 75 puntos', true, [0.22, 0.08, 0.19]);
+        $this->drawClippedText(
+            $stream,
+            42,
+            $winnerY + 8,
+            8,
+            'PROVEEDORES EVALUADOS: ' . implode(', ', array_filter($providerNames)),
+            330,
+            [0.22, 0.08, 0.19]
+        );
+        $this->drawText($stream, 398, $winnerY + 20, 8, 'PUNTAJE MÍNIMO: 75 puntos', true, [0.22, 0.08, 0.19]);
 
-        $obsY = $winnerY - 66;
+        $justificationY = $winnerY - 54;
         $stream[] = '0.95 0.97 1.00 rg';
-        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $obsY, 535, 52);
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $justificationY, 535, 40);
+        $this->drawText($stream, 42, $justificationY + 24, 9, 'JUSTIFICACIÓN DE SELECCIÓN', true, [0.11, 0.19, 0.42]);
+        $this->drawWrappedText(
+            $stream,
+            42,
+            $justificationY + 10,
+            8,
+            $winnerJustification !== '' ? $winnerJustification : 'Sin justificación registrada para la selección del proveedor ganador.',
+            515,
+            [0.18, 0.21, 0.27],
+            false,
+            2
+        );
+
+        $obsY = $justificationY - 58;
+        $stream[] = '0.95 0.97 1.00 rg';
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $obsY, 535, 64);
         $this->drawText($stream, 42, $obsY + 35, 9, 'COMENTARIOS / OBSERVACIONES', true, [0.11, 0.19, 0.42]);
-        $this->drawWrappedText($stream, 42, $obsY + 18, 8, $observations !== '' ? $observations : 'Sin observaciones registradas.', 515, [0.18, 0.21, 0.27], false, 2);
+        $this->drawWrappedText($stream, 42, $obsY + 20, 8, $observations !== '' ? $observations : 'Sin observaciones registradas.', 515, [0.18, 0.21, 0.27], false, 3);
 
-        $requestBoxY = $obsY - 182;
+        $requestBoxY = $obsY - 194;
         $stream[] = '0.98 0.99 1.00 rg';
-        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $requestBoxY, 535, 168);
-        $this->drawText($stream, 42, $requestBoxY + 152, 9, 'DETALLE DE SOLICITUD', true, [0.11, 0.19, 0.42]);
-        $this->drawText($stream, 42, $requestBoxY + 136, 8, 'Descripción:', true, [0.18, 0.21, 0.27]);
-        $this->drawWrappedText($stream, 98, $requestBoxY + 136, 8, $requestDescription !== '' ? $requestDescription : 'Sin descripción registrada.', 459, [0.18, 0.21, 0.27], false, 3);
-        $this->drawText($stream, 42, $requestBoxY + 102, 8, 'Justificación:', true, [0.18, 0.21, 0.27]);
-        $this->drawWrappedText($stream, 98, $requestBoxY + 102, 8, $requestJustification !== '' ? $requestJustification : 'Sin justificación registrada.', 459, [0.18, 0.21, 0.27], false, 3);
-        $this->drawText($stream, 42, $requestBoxY + 68, 8, 'Adjuntos solicitud:', true, [0.18, 0.21, 0.27]);
-        $this->drawWrappedText($stream, 128, $requestBoxY + 68, 8, !empty($attachmentSummary) ? implode(', ', $attachmentSummary) : 'Sin archivos adjuntos en la solicitud.', 429, [0.18, 0.21, 0.27], false, 2);
+        $stream[] = sprintf('%.2f %.2f %.2f %.2f re f', 30, $requestBoxY, 535, 180);
+        $this->drawText($stream, 42, $requestBoxY + 164, 9, 'DETALLE DE SOLICITUD', true, [0.11, 0.19, 0.42]);
+        $this->drawText($stream, 42, $requestBoxY + 148, 8, 'Descripción:', true, [0.18, 0.21, 0.27]);
+        $this->drawWrappedText($stream, 98, $requestBoxY + 148, 8, $requestDescription !== '' ? $requestDescription : 'Sin descripción registrada.', 459, [0.18, 0.21, 0.27], false, 2);
+        $this->drawText($stream, 42, $requestBoxY + 124, 8, 'Justificación:', true, [0.18, 0.21, 0.27]);
+        $this->drawWrappedText($stream, 98, $requestBoxY + 124, 8, $requestJustification !== '' ? $requestJustification : 'Sin justificación registrada.', 459, [0.18, 0.21, 0.27], false, 2);
+        $this->drawText($stream, 42, $requestBoxY + 100, 8, 'Adjuntos solicitud:', true, [0.18, 0.21, 0.27]);
+        $this->drawWrappedText($stream, 128, $requestBoxY + 100, 8, !empty($attachmentSummary) ? implode(', ', $attachmentSummary) : 'Sin archivos adjuntos en la solicitud.', 429, [0.18, 0.21, 0.27], false, 2);
 
-        $this->drawText($stream, 42, $requestBoxY + 42, 8, 'Adjuntos cotizaciones:', true, [0.18, 0.21, 0.27]);
+        $this->drawText($stream, 42, $requestBoxY + 74, 8, 'Adjuntos cotizaciones (evidencia):', true, [0.18, 0.21, 0.27]);
         if (!empty($quotationSummary)) {
-            $quoteLineY = $requestBoxY + 42;
+            $quoteLineY = $requestBoxY + 74;
             foreach ($quotationSummary as $provider => $files) {
-                if ($quoteLineY <= $requestBoxY + 8) {
+                if ($quoteLineY <= $requestBoxY + 10) {
                     break;
                 }
                 $line = $provider . ': ' . implode(', ', $files);
-                $this->drawWrappedText($stream, 138, $quoteLineY, 8, $line, 419, [0.18, 0.21, 0.27], false, 1);
+                $this->drawWrappedText($stream, 42, $quoteLineY - 12, 8, $line, 515, [0.18, 0.21, 0.27], false, 1);
                 $quoteLineY -= 12;
             }
         } else {
-            $this->drawWrappedText($stream, 138, $requestBoxY + 42, 8, 'Sin archivos adjuntos en cotizaciones.', 419, [0.18, 0.21, 0.27], false, 1);
+            $this->drawWrappedText($stream, 42, $requestBoxY + 62, 8, 'Sin archivos adjuntos en cotizaciones.', 515, [0.18, 0.21, 0.27], false, 1);
         }
 
         $pdf = $this->buildPdf(implode("\n", $stream), $logoData, $logoWidth, $logoHeight);
