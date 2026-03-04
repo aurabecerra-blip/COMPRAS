@@ -164,6 +164,7 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end">
+                                        <a href="<?= htmlspecialchars(route_to('supplier_evaluations', array_merge($_GET, ['show' => (int)$evaluation['id'], 'edit' => (int)$evaluation['id']]))) ?>" class="btn btn-sm btn-outline-primary">Editar</a>
                                         <form method="post" action="<?= htmlspecialchars(route_to('supplier_evaluation_delete')) ?>" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta evaluación? Esta acción no se puede deshacer.');">
                                             <input type="hidden" name="id" value="<?= (int)$evaluation['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
@@ -208,7 +209,13 @@
             $deliveryBreaches = (int)($detailMap['delivery_time']['notes'] ?? 0);
             ?>
             <hr>
-            <h6 class="mb-3">Editar evaluación</h6>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Corrección de evaluación</h6>
+                <?php if (!$isEditMode): ?>
+                    <a href="<?= htmlspecialchars(route_to('supplier_evaluations', array_merge($_GET, ['show' => (int)$selectedEvaluation['id'], 'edit' => (int)$selectedEvaluation['id']]))) ?>" class="btn btn-sm btn-outline-primary">Editar evaluación</a>
+                <?php endif; ?>
+            </div>
+            <?php if ($isEditMode): ?>
             <form action="<?= htmlspecialchars(route_to('supplier_evaluation_update')) ?>" method="post" class="row g-2">
                 <input type="hidden" name="id" value="<?= (int)$selectedEvaluation['id'] ?>">
                 <div class="col-md-6">
@@ -254,6 +261,9 @@
                 <div class="col-12 text-end"><button class="btn btn-warning">Guardar corrección</button></div>
             </form>
             <p class="mb-0 mt-2 text-muted">La evaluación puede editarse para corregir puntajes, manteniendo trazabilidad en auditoría.</p>
+            <?php else: ?>
+                <p class="mb-0 text-muted">Los puntajes ya guardados no se editan desde el resumen. Usa el botón <strong>Editar evaluación</strong> para corregir y recalcular la evaluación del proveedor.</p>
+            <?php endif; ?>
         </div>
     </div>
 <?php endif; ?>

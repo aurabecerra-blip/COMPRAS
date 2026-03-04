@@ -31,6 +31,11 @@ class SupplierEvaluationController
         $evaluations = $this->evaluations->bySupplierAndDate($supplierId > 0 ? $supplierId : null, $from, $to, $leaderFilter);
 
         $showId = (int)($_GET['show'] ?? 0);
+        $editId = (int)($_GET['edit'] ?? 0);
+        if ($showId <= 0 && $editId > 0) {
+            $showId = $editId;
+        }
+
         $selectedEvaluation = null;
         if ($showId > 0) {
             $candidate = $this->evaluations->findWithDetails($showId);
@@ -39,11 +44,16 @@ class SupplierEvaluationController
             }
         }
 
+        $isEditMode = $selectedEvaluation && $editId > 0 && (int)$selectedEvaluation['id'] === $editId;
+
         include __DIR__ . '/../views/supplier_evaluations/index.php';
     }
 
     public function downloadPdf(): void
     {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['lider', 'administrador']);
+
         $evaluationId = (int)($_GET['evaluation_id'] ?? 0);
         if ($evaluationId <= 0) {
             http_response_code(400);
@@ -52,13 +62,13 @@ class SupplierEvaluationController
         }
 
         $evaluation = $this->evaluations->findWithDetails($evaluationId);
-        if (!$evaluation || empty($evaluation['pdf_path'])) {
+        if (!$evaluation) {
             http_response_code(404);
             echo 'PDF no disponible para esta evaluación.';
             return;
         }
 
-        $absolutePath = $this->resolvePdfAbsolutePath((string)$evaluation['pdf_path']);
+        $absolutePath = $this->resolvePdfAbsolutePath((string)($evaluation['pdf_path'] ?? ''));
         if ($absolutePath === '' || !is_file($absolutePath)) {
             try {
                 $pdfPath = $this->pdfBuilder->generate($evaluation);
