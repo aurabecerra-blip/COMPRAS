@@ -113,6 +113,7 @@ class ProviderSelectionController
                 'scores' => $scores,
                 'criteria' => $this->selectionCriteria(),
                 'winner_name' => $providersById[$winner['winner_provider_id']]['name'] ?? 'N/D',
+                'winner_justification' => $winner['tie_break_reason'] ?? '',
                 'observations' => trim((string)($_POST['observations'] ?? '')),
             ]);
         } catch (Throwable $e) {
@@ -264,6 +265,7 @@ class ProviderSelectionController
             'scores' => $scores,
             'criteria' => $this->selectionCriteria(),
             'winner_name' => $winnerName,
+            'winner_justification' => trim((string)($evaluation['tie_break_reason'] ?? '')),
             'observations' => trim((string)($evaluation['observations'] ?? '')),
         ]);
 
