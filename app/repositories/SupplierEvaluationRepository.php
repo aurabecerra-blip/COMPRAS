@@ -1,12 +1,15 @@
 <?php
 class SupplierEvaluationRepository
 {
+    private ?bool $hasLeaderUserColumn = null;
+
     public function __construct(private Database $db)
     {
     }
 
-    public function bySupplierAndDate(?int $supplierId = null, string $from = '', string $to = ''): array
+    public function bySupplierAndDate(?int $supplierId = null, string $from = '', string $to = '', ?int $leaderUserId = null): array
     {
+        $supportsLeader = $this->supportsLeaderUserColumn();
         $sql = 'SELECT ep.*, s.name AS supplier_name, s.nit AS supplier_nit, s.service AS supplier_service,
                        u.name AS evaluator_name
                 FROM supplier_evaluations ep
@@ -30,6 +33,11 @@ class SupplierEvaluationRepository
             $params[] = $to;
         }
 
+        if ($supportsLeader && $leaderUserId !== null && $leaderUserId > 0) {
+            $sql .= ' AND s.leader_user_id = ?';
+            $params[] = $leaderUserId;
+        }
+
         $sql .= ' ORDER BY ep.evaluation_date DESC, ep.id DESC';
 
         $stmt = $this->db->pdo()->prepare($sql);
@@ -39,13 +47,15 @@ class SupplierEvaluationRepository
 
     public function findWithDetails(int $id): ?array
     {
-        $stmt = $this->db->pdo()->prepare('SELECT ep.*, s.name AS supplier_name, s.nit AS supplier_nit, s.service AS supplier_service, s.email AS supplier_email,
-                                                  u.name AS evaluator_name, u.email AS evaluator_email
-                                           FROM supplier_evaluations ep
-                                           INNER JOIN suppliers s ON s.id = ep.supplier_id
-                                           INNER JOIN users u ON u.id = ep.evaluator_user_id
-                                           WHERE ep.id = ?
-                                           LIMIT 1');
+        $supportsLeader = $this->supportsLeaderUserColumn();
+        $stmt = $this->db->pdo()->prepare('SELECT ep.*, s.name AS supplier_name, s.nit AS supplier_nit, s.service AS supplier_service, s.email AS supplier_email, '
+            . ($supportsLeader ? 's.leader_user_id AS supplier_leader_user_id,' : 'NULL AS supplier_leader_user_id,')
+            . ' u.name AS evaluator_name, u.email AS evaluator_email
+               FROM supplier_evaluations ep
+               INNER JOIN suppliers s ON s.id = ep.supplier_id
+               INNER JOIN users u ON u.id = ep.evaluator_user_id
+               WHERE ep.id = ?
+               LIMIT 1');
         $stmt->execute([$id]);
         $evaluation = $stmt->fetch();
         if (!$evaluation) {
@@ -60,6 +70,13 @@ class SupplierEvaluationRepository
         $evaluation['details'] = $detailsStmt->fetchAll();
 
         return $evaluation;
+    }
+
+    public function findById(int $id): ?array
+    {
+        $stmt = $this->db->pdo()->prepare('SELECT * FROM supplier_evaluations WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        return $stmt->fetch() ?: null;
     }
 
     public function allForExport(): array
@@ -80,11 +97,55 @@ class SupplierEvaluationRepository
         $stmt->execute([$id]);
     }
 
-
     public function attachPdf(int $evaluationId, string $pdfPath): void
     {
         $stmt = $this->db->pdo()->prepare('UPDATE supplier_evaluations SET pdf_path = ? WHERE id = ?');
         $stmt->execute([$pdfPath, $evaluationId]);
+    }
+
+    public function update(int $evaluationId, array $header, array $details): void
+    {
+        $pdo = $this->db->pdo();
+        $pdo->beginTransaction();
+
+        try {
+            $stmt = $pdo->prepare('UPDATE supplier_evaluations
+                SET total_score = ?, status_label = ?, observations = ?, evaluator_user_id = ?, evaluation_date = NOW(), pdf_path = ?
+                WHERE id = ?');
+            $stmt->execute([
+                $header['total_score'],
+                $header['status_label'],
+                $header['observations'] ?? null,
+                $header['evaluator_user_id'],
+                $header['pdf_path'] ?? null,
+                $evaluationId,
+            ]);
+
+            $pdo->prepare('DELETE FROM supplier_evaluation_details WHERE evaluation_id = ?')->execute([$evaluationId]);
+
+            $detailStmt = $pdo->prepare('INSERT INTO supplier_evaluation_details
+                (evaluation_id, criterion_code, criterion_name, option_key, option_label, score, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?)');
+
+            foreach ($details as $detail) {
+                $detailStmt->execute([
+                    $evaluationId,
+                    $detail['criterion_code'],
+                    $detail['criterion_name'],
+                    $detail['option_key'],
+                    $detail['option_label'],
+                    $detail['score'],
+                    $detail['notes'] ?? null,
+                ]);
+            }
+
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 
     public function create(array $header, array $details): int
@@ -131,5 +192,18 @@ class SupplierEvaluationRepository
             }
             throw $e;
         }
+    }
+
+    private function supportsLeaderUserColumn(): bool
+    {
+        if ($this->hasLeaderUserColumn !== null) {
+            return $this->hasLeaderUserColumn;
+        }
+
+        $stmt = $this->db->pdo()->prepare('SHOW COLUMNS FROM suppliers LIKE ?');
+        $stmt->execute(['leader_user_id']);
+        $this->hasLeaderUserColumn = (bool)$stmt->fetch();
+
+        return $this->hasLeaderUserColumn;
     }
 }

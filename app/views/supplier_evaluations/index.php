@@ -1,16 +1,5 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
-<?php
-$selectedEvaluation = null;
-$showId = (int)($_GET['show'] ?? 0);
-if ($showId > 0) {
-    foreach ($evaluations as $item) {
-        if ((int)$item['id'] === $showId) {
-            $selectedEvaluation = $item;
-            break;
-        }
-    }
-}
-?>
+
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
         <p class="text-uppercase text-muted small mb-1">Módulo ISO · Evaluación de proveedores</p>
@@ -209,7 +198,62 @@ if ($showId > 0) {
                     <i class="bi bi-file-earmark-pdf"></i> Descargar PDF de evaluación
                 </a>
             <?php endif; ?>
-            <p class="mb-0 mt-2 text-muted">La evaluación se almacena como trazabilidad histórica y no es editable una vez enviada.</p>
+
+            <?php
+            $detailMap = [];
+            foreach (($selectedEvaluation['details'] ?? []) as $detail) {
+                $detailMap[$detail['criterion_code']] = $detail;
+            }
+            $deliveryMode = (($detailMap['delivery_time']['option_key'] ?? '') === 'breach') ? 'breach' : 'on_time';
+            $deliveryBreaches = (int)($detailMap['delivery_time']['notes'] ?? 0);
+            ?>
+            <hr>
+            <h6 class="mb-3">Editar evaluación</h6>
+            <form action="<?= htmlspecialchars(route_to('supplier_evaluation_update')) ?>" method="post" class="row g-2">
+                <input type="hidden" name="id" value="<?= (int)$selectedEvaluation['id'] ?>">
+                <div class="col-md-6">
+                    <label class="form-label">Cumple con tiempos (20%)</label>
+                    <select name="delivery_mode" class="form-select">
+                        <option value="on_time" <?= $deliveryMode === 'on_time' ? 'selected' : '' ?>>A tiempo</option>
+                        <option value="breach" <?= $deliveryMode === 'breach' ? 'selected' : '' ?>>Incumplimiento</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">N° incumplimientos</label>
+                    <input type="number" min="0" name="delivery_breaches" class="form-control" value="<?= $deliveryBreaches ?>">
+                </div>
+                <div class="col-md-6"><label class="form-label">Calidad</label>
+                    <select name="quality" class="form-select" required>
+                        <option value="meets" <?= (($detailMap['quality']['option_key'] ?? '') === 'meets') ? 'selected' : '' ?>>Cumple</option>
+                        <option value="not_meets" <?= (($detailMap['quality']['option_key'] ?? '') === 'not_meets') ? 'selected' : '' ?>>No cumple</option>
+                    </select>
+                </div>
+                <div class="col-md-6"><label class="form-label">Postventa</label>
+                    <select name="after_sales" class="form-select" required>
+                        <option value="full" <?= (($detailMap['after_sales']['option_key'] ?? '') === 'full') ? 'selected' : '' ?>>Cumple oportunamente</option>
+                        <option value="partial" <?= (($detailMap['after_sales']['option_key'] ?? '') === 'partial') ? 'selected' : '' ?>>Cumple parcialmente</option>
+                        <option value="none" <?= (($detailMap['after_sales']['option_key'] ?? '') === 'none') ? 'selected' : '' ?>>No cumple</option>
+                    </select>
+                </div>
+                <div class="col-md-6"><label class="form-label">SQR</label>
+                    <select name="sqr" class="form-select" required>
+                        <option value="no_claims" <?= (($detailMap['sqr']['option_key'] ?? '') === 'no_claims') ? 'selected' : '' ?>>Sin quejas</option>
+                        <option value="timely" <?= (($detailMap['sqr']['option_key'] ?? '') === 'timely') ? 'selected' : '' ?>>Atiende oportunamente</option>
+                        <option value="untimely" <?= (($detailMap['sqr']['option_key'] ?? '') === 'untimely') ? 'selected' : '' ?>>No atiende oportunamente</option>
+                    </select>
+                </div>
+                <div class="col-md-6"><label class="form-label">Documentación</label>
+                    <select name="documents" class="form-select" required>
+                        <option value="complete" <?= (($detailMap['documents']['option_key'] ?? '') === 'complete') ? 'selected' : '' ?>>Completa</option>
+                        <option value="incomplete" <?= (($detailMap['documents']['option_key'] ?? '') === 'incomplete') ? 'selected' : '' ?>>Incompleta</option>
+                    </select>
+                </div>
+                <div class="col-12"><label class="form-label">Observaciones</label>
+                    <textarea name="observations" class="form-control" rows="3" maxlength="1000"><?= htmlspecialchars($selectedEvaluation['observations'] ?? '') ?></textarea>
+                </div>
+                <div class="col-12 text-end"><button class="btn btn-warning">Guardar corrección</button></div>
+            </form>
+            <p class="mb-0 mt-2 text-muted">La evaluación puede editarse para corregir puntajes, manteniendo trazabilidad en auditoría.</p>
         </div>
     </div>
 <?php endif; ?>

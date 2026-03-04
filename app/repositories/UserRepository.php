@@ -116,4 +116,18 @@ class UserRepository
     {
         return self::VALID_ROLES;
     }
+
+    public function activeByRoles(array $roles): array
+    {
+        $roles = array_values(array_unique(array_filter(array_map('trim', $roles))));
+        if (empty($roles)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($roles), '?'));
+        $stmt = $this->db->pdo()->prepare('SELECT id, name, email, role FROM users WHERE is_active = 1 AND role IN (' . $placeholders . ') ORDER BY name');
+        $stmt->execute($roles);
+
+        return $stmt->fetchAll();
+    }
 }

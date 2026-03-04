@@ -1,7 +1,7 @@
 <?php
 class SupplierController
 {
-    public function __construct(private SupplierRepository $repo, private Flash $flash, private AuditLogger $audit, private Auth $auth, private AuthMiddleware $authMiddleware)
+    public function __construct(private SupplierRepository $repo, private UserRepository $users, private Flash $flash, private AuditLogger $audit, private Auth $auth, private AuthMiddleware $authMiddleware)
     {
     }
 
@@ -10,6 +10,7 @@ class SupplierController
         $this->authMiddleware->check();
         $this->auth->requireRole(['compras', 'administrador']);
         $suppliers = $this->repo->all();
+        $leaders = $this->users->activeByRoles(['lider', 'administrador']);
         include __DIR__ . '/../views/suppliers/index.php';
     }
 
@@ -24,6 +25,7 @@ class SupplierController
             'contact' => trim($_POST['contact'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
+            'leader_user_id' => (int)($_POST['leader_user_id'] ?? 0) ?: null,
         ];
         if ($data['name'] === '') {
             $this->flash->add('danger', 'El nombre es obligatorio');
@@ -49,6 +51,7 @@ class SupplierController
             'contact' => trim($_POST['contact'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
+            'leader_user_id' => (int)($_POST['leader_user_id'] ?? 0) ?: null,
         ];
 
         if ($id <= 0 || $data['name'] === '') {

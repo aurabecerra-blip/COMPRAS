@@ -59,20 +59,21 @@ class ProviderSelectionController
         }
 
         $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
-        $latestQuotes = $this->quotes->latestQuotesByProvider($purchaseRequestId);
-        $autoScores = $this->scoring->buildScoresFromQuotes($latestQuotes);
-
-        foreach ($autoScores as $score) {
-            $this->selections->upsertScore(
-                (int)$evaluation['id'],
-                (int)$score['provider_id'],
-                $score,
-                $score['detail'],
-                null
-            );
-        }
-
         $scores = $this->selections->scores((int)$evaluation['id']);
+        if (count($scores) === 0) {
+            $latestQuotes = $this->quotes->latestQuotesByProvider($purchaseRequestId);
+            $autoScores = $this->scoring->buildScoresFromQuotes($latestQuotes);
+            foreach ($autoScores as $score) {
+                $this->selections->upsertScore(
+                    (int)$evaluation['id'],
+                    (int)$score['provider_id'],
+                    $score,
+                    $score['detail'],
+                    null
+                );
+            }
+            $scores = $this->selections->scores((int)$evaluation['id']);
+        }
         if (count($scores) < 3) {
             http_response_code(422);
             $this->flash->add('danger', 'Debe registrar cotizaciones para al menos 3 proveedores.');
@@ -143,6 +144,56 @@ class ProviderSelectionController
         header('Location: ' . route_to('provider_selection', ['id' => $purchaseRequestId]));
     }
 
+    public function updateScores(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['compras', 'administrador', 'lider']);
+
+        $purchaseRequestId = (int)($_POST['purchase_request_id'] ?? 0);
+        $evaluation = $this->selections->getOrCreateEvaluation($purchaseRequestId);
+        $scores = $this->selections->scores((int)$evaluation['id']);
+
+        if (empty($scores)) {
+            $this->flash->add('danger', 'No hay puntajes para editar en esta selección.');
+            header('Location: ' . route_to('provider_selection', ['id' => $purchaseRequestId]));
+            return;
+        }
+
+        foreach ($scores as $score) {
+            $providerId = (int)$score['provider_id'];
+            $suffix = (string)$providerId;
+
+            $experiencia = max(0, min(15, (int)($_POST['experiencia_score_' . $suffix] ?? $score['experiencia_score'])));
+            $formaPago = max(0, min(25, (int)($_POST['forma_pago_score_' . $suffix] ?? $score['forma_pago_score'])));
+            $entrega = max(0, min(20, (int)($_POST['entrega_score_' . $suffix] ?? $score['entrega_score'])));
+            $descuento = max(0, min(5, (int)($_POST['descuento_score_' . $suffix] ?? $score['descuento_score'])));
+            $certificaciones = max(0, min(10, (int)($_POST['certificaciones_score_' . $suffix] ?? $score['certificaciones_score'])));
+            $precios = max(0, min(25, (int)($_POST['precios_score_' . $suffix] ?? $score['precios_score'])));
+            $total = $experiencia + $formaPago + $entrega + $descuento + $certificaciones + $precios;
+
+            $detail = $score['criterio_detalle'] ?? [];
+            $data = [
+                'experiencia_score' => $experiencia,
+                'forma_pago_score' => $formaPago,
+                'entrega_score' => $entrega,
+                'descuento_score' => $descuento,
+                'certificaciones_score' => $certificaciones,
+                'precios_score' => $precios,
+                'total_score' => $total,
+            ];
+
+            $this->selections->upsertScore((int)$evaluation['id'], $providerId, $data, $detail, trim((string)($_POST['score_observations_' . $suffix] ?? '')) ?: null);
+        }
+
+        $this->audit->log((int)$this->auth->user()['id'], 'provider_selection_scores_update', [
+            'purchase_request_id' => $purchaseRequestId,
+            'evaluation_id' => (int)$evaluation['id'],
+        ]);
+
+        $this->flash->add('success', 'Puntajes de selección actualizados manualmente.');
+        header('Location: ' . route_to('provider_selection', ['id' => $purchaseRequestId]));
+    }
+
     public function pdf(): void
     {
         $this->authMiddleware->check();
@@ -172,7 +223,7 @@ class ProviderSelectionController
             return;
         }
 
-        $absolutePath = __DIR__ . '/../../public' . $evaluation['pdf_path'];
+        $absolutePath = $this->resolvePdfAbsolutePath((string)$evaluation['pdf_path']);
         if (!is_file($absolutePath)) {
             http_response_code(404);
             echo 'Archivo no disponible';
@@ -226,6 +277,36 @@ class ProviderSelectionController
         ]);
 
         return $evaluation;
+    }
+
+    private function resolvePdfAbsolutePath(string $pdfPath): string
+    {
+        $trimmed = trim($pdfPath);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        if ($trimmed[0] !== '/' && is_file($trimmed)) {
+            return $trimmed;
+        }
+
+        $normalizedPath = '/' . ltrim($trimmed, '/');
+        $candidates = [];
+
+        $documentRoot = trim((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($documentRoot !== '') {
+            $candidates[] = rtrim($documentRoot, '/\\') . $normalizedPath;
+        }
+
+        $candidates[] = __DIR__ . '/../../public' . $normalizedPath;
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return '';
     }
 
     private function selectionCriteria(): array

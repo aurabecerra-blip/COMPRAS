@@ -23,9 +23,21 @@ class SupplierEvaluationController
         $from = trim($_GET['from'] ?? '');
         $to = trim($_GET['to'] ?? '');
 
-        $suppliers = $this->suppliers->all();
+        $user = $this->auth->user();
+        $leaderFilter = (($user['role'] ?? '') === 'lider') ? (int)$user['id'] : null;
+
+        $suppliers = $this->suppliers->all($leaderFilter);
         $criteria = $this->calculator->definitions();
-        $evaluations = $this->evaluations->bySupplierAndDate($supplierId > 0 ? $supplierId : null, $from, $to);
+        $evaluations = $this->evaluations->bySupplierAndDate($supplierId > 0 ? $supplierId : null, $from, $to, $leaderFilter);
+
+        $showId = (int)($_GET['show'] ?? 0);
+        $selectedEvaluation = null;
+        if ($showId > 0) {
+            $candidate = $this->evaluations->findWithDetails($showId);
+            if ($candidate && ($leaderFilter === null || (int)($candidate['supplier_leader_user_id'] ?? 0) === $leaderFilter || (int)($candidate['evaluator_user_id'] ?? 0) === $leaderFilter)) {
+                $selectedEvaluation = $candidate;
+            }
+        }
 
         include __DIR__ . '/../views/supplier_evaluations/index.php';
     }
@@ -88,6 +100,12 @@ class SupplierEvaluationController
         $supplier = $this->suppliers->find($supplierId);
         if (!$supplier) {
             $this->flash->add('danger', 'Proveedor no encontrado.');
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        if (($this->auth->user()['role'] ?? '') === 'lider' && (int)($supplier['leader_user_id'] ?? 0) !== (int)$this->auth->user()['id']) {
+            $this->flash->add('danger', 'Solo puedes evaluar proveedores asignados a tu liderazgo.');
             header('Location: ' . route_to('supplier_evaluations'));
             return;
         }
@@ -174,6 +192,94 @@ class SupplierEvaluationController
                 ? 'Evaluación registrada y enviada al proveedor con su PDF.'
                 : 'Evaluación registrada y enviada al proveedor, pero no se pudo generar el PDF. Verifique permisos del directorio /uploads/evaluations.'
         );
+        header('Location: ' . route_to('supplier_evaluations', ['show' => $evaluationId]));
+    }
+
+    public function update(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['lider', 'administrador']);
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        $evaluationId = (int)($_POST['id'] ?? 0);
+        $existing = $this->evaluations->findWithDetails($evaluationId);
+        if (!$existing) {
+            $this->flash->add('danger', 'Evaluación no encontrada para editar.');
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        $supplier = $this->suppliers->find((int)$existing['supplier_id']);
+        if (!$supplier) {
+            $this->flash->add('danger', 'Proveedor no encontrado.');
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        if (($this->auth->user()['role'] ?? '') === 'lider' && (int)($supplier['leader_user_id'] ?? 0) !== (int)$this->auth->user()['id']) {
+            $this->flash->add('danger', 'Solo puedes editar evaluaciones de proveedores asignados a tu liderazgo.');
+            header('Location: ' . route_to('supplier_evaluations'));
+            return;
+        }
+
+        try {
+            $result = $this->calculator->calculate([
+                'delivery_time' => [
+                    'mode' => $_POST['delivery_mode'] ?? 'on_time',
+                    'breaches' => $_POST['delivery_breaches'] ?? 0,
+                ],
+                'quality' => $_POST['quality'] ?? '',
+                'after_sales' => $_POST['after_sales'] ?? '',
+                'sqr' => $_POST['sqr'] ?? '',
+                'documents' => $_POST['documents'] ?? '',
+            ]);
+        } catch (Throwable $e) {
+            $this->flash->add('danger', 'No se pudo recalcular la evaluación: ' . $e->getMessage());
+            header('Location: ' . route_to('supplier_evaluations', ['show' => $evaluationId]));
+            return;
+        }
+
+        $user = $this->auth->user();
+        $observations = trim($_POST['observations'] ?? '');
+
+        $this->evaluations->update($evaluationId, [
+            'evaluator_user_id' => (int)$user['id'],
+            'total_score' => $result['total_score'],
+            'status_label' => $result['status_label'],
+            'observations' => $observations !== '' ? $observations : null,
+            'pdf_path' => null,
+        ], $result['details']);
+
+        $evaluation = $this->evaluations->findWithDetails($evaluationId);
+        $pdfGenerated = false;
+        if ($evaluation) {
+            try {
+                $pdfPath = $this->pdfBuilder->generate($evaluation);
+                $this->evaluations->attachPdf($evaluationId, $pdfPath);
+                $pdfGenerated = true;
+            } catch (Throwable $e) {
+                $this->audit->log((int)$user['id'], 'supplier_evaluation_pdf_update_error', [
+                    'evaluation_id' => $evaluationId,
+                    'supplier_id' => (int)$evaluation['supplier_id'],
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $this->audit->log((int)$user['id'], 'supplier_evaluation_update', [
+            'evaluation_id' => $evaluationId,
+            'supplier_id' => (int)$existing['supplier_id'],
+            'total_score' => $result['total_score'],
+            'status_label' => $result['status_label'],
+        ]);
+
+        $this->flash->add($pdfGenerated ? 'success' : 'warning', $pdfGenerated
+            ? 'Evaluación actualizada correctamente.'
+            : 'Evaluación actualizada, pero no se pudo regenerar el PDF.');
         header('Location: ' . route_to('supplier_evaluations', ['show' => $evaluationId]));
     }
 

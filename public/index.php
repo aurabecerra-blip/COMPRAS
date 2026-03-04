@@ -37,7 +37,7 @@ $poController = new PurchaseOrderController(
     $flash,
     $authMiddleware
 );
-$supplierController = new SupplierController(new SupplierRepository($db), $flash, $audit, $auth, $authMiddleware);
+$supplierController = new SupplierController(new SupplierRepository($db), $userRepo, $flash, $audit, $auth, $authMiddleware);
 
 $providerQuoteController = new ProviderQuoteController(
     new ProviderQuoteRepository($db),
@@ -209,6 +209,9 @@ switch ($page) {
     case 'provider_selection_evaluate':
         $providerSelectionController->evaluate();
         break;
+    case 'provider_selection_scores_update':
+        $providerSelectionController->updateScores();
+        break;
     case 'provider_selection_close':
         $providerSelectionController->close();
         break;
@@ -221,6 +224,9 @@ switch ($page) {
         break;
     case 'supplier_evaluation_store':
         $supplierEvaluationController->store();
+        break;
+    case 'supplier_evaluation_update':
+        $supplierEvaluationController->update();
         break;
     case 'supplier_evaluation_delete':
         $supplierEvaluationController->delete();

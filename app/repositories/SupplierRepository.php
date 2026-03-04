@@ -1,24 +1,41 @@
 <?php
 class SupplierRepository
 {
+    private ?bool $hasLeaderUserColumn = null;
+
     public function __construct(private Database $db)
     {
     }
 
-    public function all(): array
+    public function all(?int $leaderUserId = null): array
     {
-        $sql = 'SELECT s.*, 
-                    COUNT(DISTINCT q.id) AS quotations_count,
+        $supportsLeader = $this->supportsLeaderUserColumn();
+
+        $sql = 'SELECT s.*, '
+            . ($supportsLeader ? 'u.name AS leader_name,' : 'NULL AS leader_name,')
+            . ' COUNT(DISTINCT q.id) AS quotations_count,
                     AVG(q.lead_time_days) AS avg_lead_time,
                     COUNT(DISTINCT po.id) AS pos_count,
                     SUM(po.total_amount) AS pos_spend,
                     SUM(po.status IN (\'CREADA\',\'ENVIADA_A_PROVEEDOR\',\'RECIBIDA_PARCIAL\')) AS open_pos
-                FROM suppliers s
-                LEFT JOIN quotations q ON q.supplier_id = s.id
+                FROM suppliers s '
+            . ($supportsLeader ? 'LEFT JOIN users u ON u.id = s.leader_user_id ' : '')
+            . 'LEFT JOIN quotations q ON q.supplier_id = s.id
                 LEFT JOIN purchase_orders po ON po.supplier_id = s.id
-                GROUP BY s.id
+                WHERE 1 = 1';
+
+        $params = [];
+        if ($supportsLeader && $leaderUserId !== null && $leaderUserId > 0) {
+            $sql .= ' AND s.leader_user_id = ?';
+            $params[] = $leaderUserId;
+        }
+
+        $sql .= ' GROUP BY s.id' . ($supportsLeader ? ', u.name' : '') . '
                 ORDER BY s.name';
-        return $this->db->pdo()->query($sql)->fetchAll();
+
+        $stmt = $this->db->pdo()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
     public function find(int $id): ?array
@@ -55,12 +72,24 @@ class SupplierRepository
 
     public function create(array $data): void
     {
+        if ($this->supportsLeaderUserColumn()) {
+            $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, nit, service, contact, email, phone, leader_user_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
+            $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone'], $data['leader_user_id'] ?? null]);
+            return;
+        }
+
         $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, nit, service, contact, email, phone, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
         $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone']]);
     }
 
     public function update(int $id, array $data): void
     {
+        if ($this->supportsLeaderUserColumn()) {
+            $stmt = $this->db->pdo()->prepare('UPDATE suppliers SET name = ?, nit = ?, service = ?, contact = ?, email = ?, phone = ?, leader_user_id = ? WHERE id = ?');
+            $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone'], $data['leader_user_id'] ?? null, $id]);
+            return;
+        }
+
         $stmt = $this->db->pdo()->prepare('UPDATE suppliers SET name = ?, nit = ?, service = ?, contact = ?, email = ?, phone = ? WHERE id = ?');
         $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone'], $id]);
     }
@@ -69,5 +98,18 @@ class SupplierRepository
     {
         $stmt = $this->db->pdo()->prepare('DELETE FROM suppliers WHERE id = ?');
         $stmt->execute([$id]);
+    }
+
+    private function supportsLeaderUserColumn(): bool
+    {
+        if ($this->hasLeaderUserColumn !== null) {
+            return $this->hasLeaderUserColumn;
+        }
+
+        $stmt = $this->db->pdo()->prepare('SHOW COLUMNS FROM suppliers LIKE ?');
+        $stmt->execute(['leader_user_id']);
+        $this->hasLeaderUserColumn = (bool)$stmt->fetch();
+
+        return $this->hasLeaderUserColumn;
     }
 }

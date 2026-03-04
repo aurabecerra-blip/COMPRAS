@@ -190,35 +190,39 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
         <h5>Análisis automático comparativo</h5>
         <p class="text-muted mb-3">Con la información registrada, el sistema calcula los puntajes sin volver a preguntar criterios.</p>
         <div class="alert alert-info py-2 mb-3">
-            <strong>Regla de negocio:</strong> para cerrar la selección, el proveedor ganador debe alcanzar mínimo <strong>75 puntos</strong>.
+            <strong>Regla de negocio:</strong> el mínimo recomendado es <strong>75 puntos</strong>. Si seleccionas por debajo de ese valor, debes justificarlo.
         </div>
 
-        <table class="table table-bordered table-sm align-middle">
-            <thead>
-            <tr>
-                <th>Proveedor</th><th>Precio</th><th>Precios (25%)</th><th>Exp. (15%)</th><th>Entrega (20%)</th><th>Pago (25%)</th><th>Desc. (5%)</th><th>Cert. (10%)</th><th>Total</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach (($evaluation['scores'] ?? []) as $score):
-                $providerId = (int)$score['provider_id'];
-                $quote = $quotesByProvider[$providerId] ?? null;
-                $detail = $score['criterio_detalle'] ?? [];
-            ?>
+        <form method="post" action="<?= htmlspecialchars(route_to('provider_selection_scores_update')) ?>">
+            <input type="hidden" name="purchase_request_id" value="<?= (int)$pr['id'] ?>">
+            <table class="table table-bordered table-sm align-middle">
+                <thead>
                 <tr>
-                    <td><?= htmlspecialchars((string)$score['provider_name']) ?></td>
-                    <td><?= htmlspecialchars((string)($quote['moneda'] ?? 'COP')) ?> $<?= number_format((float)($quote['valor'] ?? 0), 2) ?></td>
-                    <td><?= (int)$score['precios_score'] ?> (<?= htmlspecialchars((string)($detail['precios'] ?? '')) ?>)</td>
-                    <td><?= (int)$score['experiencia_score'] ?></td>
-                    <td><?= (int)$score['entrega_score'] ?></td>
-                    <td><?= (int)$score['forma_pago_score'] ?></td>
-                    <td><?= (int)$score['descuento_score'] ?></td>
-                    <td><?= (int)$score['certificaciones_score'] ?></td>
-                    <td><strong><?= (int)$score['total_score'] ?></strong></td>
+                    <th>Proveedor</th><th>Precio</th><th>Precios (25%)</th><th>Exp. (15%)</th><th>Entrega (20%)</th><th>Pago (25%)</th><th>Desc. (5%)</th><th>Cert. (10%)</th><th>Total</th><th>Obs.</th>
                 </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                <?php foreach (($evaluation['scores'] ?? []) as $score):
+                    $providerId = (int)$score['provider_id'];
+                    $quote = $quotesByProvider[$providerId] ?? null;
+                ?>
+                    <tr>
+                        <td><?= htmlspecialchars((string)$score['provider_name']) ?></td>
+                        <td><?= htmlspecialchars((string)($quote['moneda'] ?? 'COP')) ?> $<?= number_format((float)($quote['valor'] ?? 0), 2) ?></td>
+                        <td><input type="number" class="form-control form-control-sm" min="0" max="25" name="precios_score_<?= $providerId ?>" value="<?= (int)$score['precios_score'] ?>"></td>
+                        <td><input type="number" class="form-control form-control-sm" min="0" max="15" name="experiencia_score_<?= $providerId ?>" value="<?= (int)$score['experiencia_score'] ?>"></td>
+                        <td><input type="number" class="form-control form-control-sm" min="0" max="20" name="entrega_score_<?= $providerId ?>" value="<?= (int)$score['entrega_score'] ?>"></td>
+                        <td><input type="number" class="form-control form-control-sm" min="0" max="25" name="forma_pago_score_<?= $providerId ?>" value="<?= (int)$score['forma_pago_score'] ?>"></td>
+                        <td><input type="number" class="form-control form-control-sm" min="0" max="5" name="descuento_score_<?= $providerId ?>" value="<?= (int)$score['descuento_score'] ?>"></td>
+                        <td><input type="number" class="form-control form-control-sm" min="0" max="10" name="certificaciones_score_<?= $providerId ?>" value="<?= (int)$score['certificaciones_score'] ?>"></td>
+                        <td><strong><?= (int)$score['total_score'] ?></strong></td>
+                        <td><input type="text" class="form-control form-control-sm" name="score_observations_<?= $providerId ?>" value="<?= htmlspecialchars((string)($score['observations'] ?? '')) ?>"></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <button class="btn btn-outline-secondary mb-2">Guardar puntajes editados</button>
+        </form>
 
         <form method="post" action="<?= htmlspecialchars(route_to('provider_selection_evaluate')) ?>">
             <input type="hidden" name="purchase_request_id" value="<?= (int)$pr['id'] ?>">
@@ -231,7 +235,7 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
             <input type="hidden" name="purchase_request_id" value="<?= (int)$pr['id'] ?>">
             <div class="row g-2">
                 <div class="col-md-4"><label class="form-label">Ganador manual (opcional)</label><select class="form-select" name="manual_winner_provider_id"><option value="0">Automático por sistema</option><?php foreach ($providers as $provider): ?><option value="<?= (int)$provider['id'] ?>"><?= htmlspecialchars($provider['name']) ?></option><?php endforeach; ?></select></div>
-                <div class="col-md-8"><label class="form-label">Justificación</label><input class="form-control" name="tie_break_reason" placeholder="Obligatoria si cambia al ganador automático"></div>
+                <div class="col-md-8"><label class="form-label">Justificación</label><input class="form-control" name="tie_break_reason" placeholder="Obligatoria si cambia al ganador automático o si queda por debajo de 75 puntos"></div>
             </div>
             <div class="mt-2"><label class="form-label">Observaciones de cierre</label><textarea class="form-control" name="observations" rows="2"><?= htmlspecialchars($evaluation['observations'] ?? '') ?></textarea></div>
             <button class="btn btn-success mt-3">Cerrar y seleccionar ganador</button>
