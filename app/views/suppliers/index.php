@@ -33,14 +33,20 @@
 
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-6 col-lg-4">
+                <label for="supplierSearch" class="form-label">Buscar proveedor</label>
+                <input type="search" id="supplierSearch" class="form-control" placeholder="Nombre, NIT, servicio o contacto">
+            </div>
+        </div>
         <div class="table-responsive">
-            <table class="table align-middle">
+            <table class="table align-middle" id="suppliersTable">
                 <thead class="table-light">
                     <tr><th>Nombre</th><th>NIT</th><th>Servicio</th><th>Líder</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th class="text-center">Cotizaciones</th><th class="text-center">OC</th><th class="text-center">OC Abiertas</th><th class="text-end">Monto OC</th><th class="text-end">Lead time prom.</th><th class="text-end">Acciones</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $s): ?>
-                        <tr>
+                        <tr data-filter-value="<?= htmlspecialchars(mb_strtolower(trim(($s['name'] ?? '') . ' ' . ($s['nit'] ?? '') . ' ' . ($s['service'] ?? '') . ' ' . ($s['contact'] ?? '')))) ?>">
                             <td class="fw-semibold"><?= htmlspecialchars($s['name']) ?></td>
                             <td><?= htmlspecialchars($s['nit'] ?? '') ?></td>
                             <td><?= htmlspecialchars($s['service'] ?? '') ?></td>
@@ -66,6 +72,7 @@
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <p class="text-muted small mb-0 d-none" id="suppliersNoResults">No se encontraron proveedores con ese criterio.</p>
         </div>
     </div>
 </div>
@@ -149,4 +156,38 @@
         </div>
     </div>
 <?php endforeach; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('supplierSearch');
+    const table = document.getElementById('suppliersTable');
+    const noResults = document.getElementById('suppliersNoResults');
+
+    if (!searchInput || !table) {
+        return;
+    }
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+    const filterRows = () => {
+        const term = searchInput.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        rows.forEach((row) => {
+            const target = row.getAttribute('data-filter-value') || '';
+            const isVisible = term === '' || target.includes(term);
+            row.classList.toggle('d-none', !isVisible);
+            if (isVisible) {
+                visibleCount += 1;
+            }
+        });
+
+        if (noResults) {
+            noResults.classList.toggle('d-none', visibleCount > 0);
+        }
+    };
+
+    searchInput.addEventListener('input', filterRows);
+});
+</script>
 <?php include __DIR__ . '/../layout/footer.php'; ?>
