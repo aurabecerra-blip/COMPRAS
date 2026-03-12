@@ -128,10 +128,7 @@ class SupplierEvaluationController
 
         try {
             $result = $this->calculator->calculate([
-                'delivery_time' => [
-                    'mode' => $_POST['delivery_mode'] ?? 'on_time',
-                    'breaches' => $_POST['delivery_breaches'] ?? 0,
-                ],
+                'delivery_time' => $_POST['delivery_time'] ?? ($_POST['delivery_mode'] ?? ''),
                 'quality' => $_POST['quality'] ?? '',
                 'after_sales' => $_POST['after_sales'] ?? '',
                 'sqr' => $_POST['sqr'] ?? '',
@@ -238,10 +235,7 @@ class SupplierEvaluationController
 
         try {
             $result = $this->calculator->calculate([
-                'delivery_time' => [
-                    'mode' => $_POST['delivery_mode'] ?? 'on_time',
-                    'breaches' => $_POST['delivery_breaches'] ?? 0,
-                ],
+                'delivery_time' => $_POST['delivery_time'] ?? ($_POST['delivery_mode'] ?? ''),
                 'quality' => $_POST['quality'] ?? '',
                 'after_sales' => $_POST['after_sales'] ?? '',
                 'sqr' => $_POST['sqr'] ?? '',

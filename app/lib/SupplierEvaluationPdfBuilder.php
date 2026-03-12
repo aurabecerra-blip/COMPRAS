@@ -212,16 +212,16 @@ class SupplierEvaluationPdfBuilder
     {
         $normalized = $this->stringToLower(trim($criterionName));
         if (str_contains($normalized, 'tiempo') || str_contains($normalized, 'entrega')) {
-            return 25;
+            return 20;
         }
         if (str_contains($normalized, 'calidad')) {
-            return 25;
+            return 40;
         }
-        if (str_contains($normalized, 'postventa')) {
-            return 15;
+        if (str_contains($normalized, 'postventa') || str_contains($normalized, 'garant')) {
+            return 10;
         }
         if (str_contains($normalized, 'sqr')) {
-            return 15;
+            return 10;
         }
         if (str_contains($normalized, 'document')) {
             return 20;

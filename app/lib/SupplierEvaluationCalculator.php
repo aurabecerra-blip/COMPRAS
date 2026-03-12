@@ -3,58 +3,78 @@ class SupplierEvaluationCalculator
 {
     public const MIN_PASSING_SCORE = 80;
 
+    private const LEVEL_FACTORS = [
+        'excellent' => 1.0,
+        'good' => 0.75,
+        'regular' => 0.5,
+        'deficient' => 0.0,
+    ];
+
+    private const LEVEL_LABELS = [
+        'excellent' => 'Excelente',
+        'good' => 'Bueno',
+        'regular' => 'Regular',
+        'deficient' => 'Deficiente',
+    ];
+
+    private const LEGACY_OPTION_MAP = [
+        'delivery_time' => [
+            'on_time' => 'excellent',
+            'breach' => 'regular',
+        ],
+        'quality' => [
+            'meets' => 'excellent',
+            'not_meets' => 'deficient',
+        ],
+        'after_sales' => [
+            'full' => 'excellent',
+            'partial' => 'regular',
+            'none' => 'deficient',
+        ],
+        'sqr' => [
+            'no_claims' => 'excellent',
+            'timely' => 'regular',
+            'untimely' => 'deficient',
+        ],
+        'documents' => [
+            'complete' => 'excellent',
+            'incomplete' => 'deficient',
+        ],
+    ];
+
     public const CRITERIA = [
         'delivery_time' => [
             'name' => 'Cumple con los tiempos de entrega',
             'max_score' => 20,
-            'type' => 'delivery',
-            'options' => [
-                'on_time' => ['label' => 'A tiempo', 'score' => 20],
-            ],
         ],
         'quality' => [
-            'name' => 'Cumple con la calidad del producto o servicio',
+            'name' => 'Calidad del producto o servicio',
             'max_score' => 40,
-            'type' => 'choice',
-            'options' => [
-                'meets' => ['label' => 'Cumple con los requisitos', 'score' => 40],
-                'not_meets' => ['label' => 'No cumple', 'score' => 0],
-            ],
         ],
         'after_sales' => [
-            'name' => 'Servicio postventa oportuno / garantías',
+            'name' => 'Servicio postventa (garantías)',
             'max_score' => 10,
-            'type' => 'choice',
-            'options' => [
-                'full' => ['label' => 'Cumple oportunamente con todas las garantías y soporte técnico', 'score' => 10],
-                'partial' => ['label' => 'Cumple parcialmente con las garantías y soporte técnico', 'score' => 5],
-                'none' => ['label' => 'No cumple con las garantías ni brinda soluciones', 'score' => 0],
-            ],
         ],
         'sqr' => [
             'name' => 'Atención oportuna a SQR (Sugerencias, Quejas y Reclamos)',
             'max_score' => 10,
-            'type' => 'choice',
-            'options' => [
-                'no_claims' => ['label' => 'No se han presentado quejas, atiende oportunamente las solicitudes', 'score' => 10],
-                'timely' => ['label' => 'Atiende oportunamente los reclamos (1 a 5 días)', 'score' => 5],
-                'untimely' => ['label' => 'No atiende reclamos oportunamente', 'score' => 0],
-            ],
         ],
         'documents' => [
             'name' => 'Cumple con los documentos requeridos',
             'max_score' => 20,
-            'type' => 'choice',
-            'options' => [
-                'complete' => ['label' => 'Cumple con todos los documentos solicitados', 'score' => 20],
-                'incomplete' => ['label' => 'No envía documentos completos o demora en la entrega', 'score' => 0],
-            ],
         ],
     ];
 
     public function definitions(): array
     {
-        return self::CRITERIA;
+        $definitions = [];
+
+        foreach (self::CRITERIA as $code => $criterion) {
+            $criterion['options'] = $this->optionsForCriterion($code);
+            $definitions[$code] = $criterion;
+        }
+
+        return $definitions;
     }
 
     public function calculate(array $input): array
@@ -63,20 +83,19 @@ class SupplierEvaluationCalculator
         $total = 0;
 
         foreach (self::CRITERIA as $code => $criterion) {
-            if ($criterion['type'] === 'delivery') {
-                $result = $this->calculateDelivery($criterion, $input[$code] ?? []);
-            } else {
-                $result = $this->calculateChoice($criterion, (string)($input[$code] ?? ''));
-            }
+            $normalizedLevel = $this->normalizeLevel($code, (string)($input[$code] ?? ''));
+            $factor = self::LEVEL_FACTORS[$normalizedLevel];
+            $score = (int)round($criterion['max_score'] * $factor);
+            $option = $this->optionsForCriterion($code)[$normalizedLevel];
 
-            $total += $result['score'];
+            $total += $score;
             $details[] = [
                 'criterion_code' => $code,
                 'criterion_name' => $criterion['name'],
-                'option_key' => $result['option_key'],
-                'option_label' => $result['option_label'],
-                'score' => $result['score'],
-                'notes' => $result['notes'],
+                'option_key' => $normalizedLevel,
+                'option_label' => $option['label'],
+                'score' => $score,
+                'notes' => null,
             ];
         }
 
@@ -87,44 +106,43 @@ class SupplierEvaluationCalculator
         ];
     }
 
-    private function calculateDelivery(array $criterion, array $raw): array
+    public function optionsForCriterion(string $criterionCode): array
     {
-        $mode = (string)($raw['mode'] ?? 'on_time');
-        $defaults = $criterion['options']['on_time'];
+        $criterion = self::CRITERIA[$criterionCode] ?? null;
+        if ($criterion === null) {
+            return [];
+        }
 
-        if ($mode !== 'breach') {
-            return [
-                'option_key' => 'on_time',
-                'option_label' => $defaults['label'],
-                'score' => $defaults['score'],
-                'notes' => null,
+        $options = [];
+        foreach (self::LEVEL_FACTORS as $key => $factor) {
+            $score = (int)round($criterion['max_score'] * $factor);
+            $options[$key] = [
+                'label' => self::LEVEL_LABELS[$key] . ' (' . $score . ')',
+                'score' => $score,
+                'factor' => $factor,
             ];
         }
 
-        $breaches = max(0, (int)($raw['breaches'] ?? 0));
-        $discount = $breaches * 2;
-        $score = max(0, $criterion['max_score'] - $discount);
-
-        return [
-            'option_key' => 'breach',
-            'option_label' => 'Incumplimientos de entrega: ' . $breaches,
-            'score' => $score,
-            'notes' => 'Descuento aplicado: ' . $discount . ' puntos.',
-        ];
+        return $options;
     }
 
-    private function calculateChoice(array $criterion, string $option): array
+    public function normalizeLevel(string $criterionCode, string $rawOption): string
     {
-        if (!isset($criterion['options'][$option])) {
-            throw new InvalidArgumentException('Opción inválida para criterio: ' . $criterion['name']);
+        $option = trim(strtolower($rawOption));
+        if ($option === '') {
+            throw new InvalidArgumentException('Debe seleccionar un nivel para el criterio: ' . (self::CRITERIA[$criterionCode]['name'] ?? $criterionCode));
         }
 
-        return [
-            'option_key' => $option,
-            'option_label' => $criterion['options'][$option]['label'],
-            'score' => $criterion['options'][$option]['score'],
-            'notes' => null,
-        ];
+        if (isset(self::LEVEL_FACTORS[$option])) {
+            return $option;
+        }
+
+        $legacy = self::LEGACY_OPTION_MAP[$criterionCode][$option] ?? null;
+        if ($legacy !== null) {
+            return $legacy;
+        }
+
+        throw new InvalidArgumentException('Opción inválida para criterio: ' . (self::CRITERIA[$criterionCode]['name'] ?? $criterionCode));
     }
 
     public function statusFromScore(int $score): string

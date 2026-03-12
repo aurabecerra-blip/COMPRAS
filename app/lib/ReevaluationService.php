@@ -1,84 +1,94 @@
 <?php
 class ReevaluationService
 {
+    private const LEVEL_FACTORS = [
+        'excellent' => 1.0,
+        'good' => 0.75,
+        'regular' => 0.5,
+        'deficient' => 0.0,
+    ];
+
+    private const LEVEL_LABELS = [
+        'excellent' => 'Excelente',
+        'good' => 'Bueno',
+        'regular' => 'Regular',
+        'deficient' => 'Deficiente',
+    ];
+
+    private const LEGACY_OPTION_MAP = [
+        'delivery_time' => [
+            'on_time' => 'excellent',
+            'breach' => 'regular',
+        ],
+        'quality' => [
+            'meets' => 'excellent',
+            'not_meets' => 'deficient',
+        ],
+        'after_sales' => [
+            'full' => 'excellent',
+            'partial' => 'regular',
+            'none' => 'deficient',
+        ],
+        'sqr' => [
+            'no_claims' => 'excellent',
+            'timely' => 'regular',
+            'untimely' => 'deficient',
+        ],
+        'documents' => [
+            'complete' => 'excellent',
+            'incomplete' => 'deficient',
+        ],
+    ];
+
     private const CRITERIA = [
         'delivery_time' => [
             'name' => 'Cumple con los tiempos de entrega',
             'weight' => 20,
         ],
         'quality' => [
-            'name' => 'Cumple con la Calidad del producto o servicio',
+            'name' => 'Calidad del producto o servicio',
             'weight' => 40,
-            'scores' => [
-                'meets' => 40,
-                'not_meets' => 0,
-            ],
-            'labels' => [
-                'meets' => 'Cumple con los requisitos',
-                'not_meets' => 'No cumple',
-            ],
         ],
         'after_sales' => [
-            'name' => 'Servicio postventa oportuno - garantías',
+            'name' => 'Servicio postventa (garantías)',
             'weight' => 10,
-            'scores' => [
-                'full' => 10,
-                'partial' => 5,
-                'none' => 0,
-            ],
-            'labels' => [
-                'full' => 'Cumple oportunamente con todas las garantías y soporte técnico',
-                'partial' => 'Cumple parcialmente con garantías y soporte técnico',
-                'none' => 'No cumple con garantías ni soporte técnico',
-            ],
+        ],
+        'sqr' => [
+            'name' => 'Atención oportuna a SQR (Sugerencias, Quejas y Reclamos)',
+            'weight' => 10,
+        ],
+        'documents' => [
+            'name' => 'Cumple con los documentos requeridos',
+            'weight' => 20,
         ],
     ];
 
     public function criteria(): array
     {
-        return self::CRITERIA;
+        $criteria = [];
+        foreach (self::CRITERIA as $code => $criterion) {
+            $criterion['options'] = $this->optionsForCriterion($code);
+            $criteria[$code] = $criterion;
+        }
+
+        return $criteria;
     }
 
     public function calculate(array $input): array
     {
         $items = [];
 
-        $deliveryMode = (string)($input['delivery_mode'] ?? 'on_time');
-        if ($deliveryMode === 'breach') {
-            $breaches = max(0, (int)($input['delivery_breaches'] ?? 0));
-            $score = max(0, 20 - ($breaches * 2));
-            $items[] = [
-                'criterion_code' => 'delivery_time',
-                'criterion_name' => self::CRITERIA['delivery_time']['name'],
-                'selected_option' => 'breach',
-                'selected_label' => 'Incumplimiento',
-                'extra_value' => $breaches,
-                'item_score' => $score,
-            ];
-        } else {
-            $items[] = [
-                'criterion_code' => 'delivery_time',
-                'criterion_name' => self::CRITERIA['delivery_time']['name'],
-                'selected_option' => 'on_time',
-                'selected_label' => 'A tiempo',
-                'extra_value' => null,
-                'item_score' => 20,
-            ];
-        }
-
-        foreach (['quality', 'after_sales'] as $code) {
-            $option = (string)($input[$code] ?? '');
-            $criterion = self::CRITERIA[$code];
-            if (!isset($criterion['scores'][$option])) {
-                throw new InvalidArgumentException('Debe seleccionar una opción válida para: ' . $criterion['name']);
-            }
+        foreach (self::CRITERIA as $code => $criterion) {
+            $selected = $this->normalizeLevel($code, (string)($input[$code] ?? ''));
+            $factor = self::LEVEL_FACTORS[$selected];
+            $score = (int)round($criterion['weight'] * $factor);
             $items[] = [
                 'criterion_code' => $code,
                 'criterion_name' => $criterion['name'],
-                'selected_option' => $option,
-                'selected_label' => $criterion['labels'][$option],
+                'selected_option' => $selected,
+                'selected_label' => self::LEVEL_LABELS[$selected],
                 'extra_value' => null,
-                'item_score' => (int)$criterion['scores'][$option],
+                'item_score' => $score,
             ];
         }
 
@@ -88,6 +98,43 @@ class ReevaluationService
         }
 
         return ['items' => $items, 'total_score' => $total];
+    }
+
+    private function optionsForCriterion(string $criterionCode): array
+    {
+        $criterion = self::CRITERIA[$criterionCode] ?? null;
+        if ($criterion === null) {
+            return [];
+        }
+
+        $options = [];
+        foreach (self::LEVEL_FACTORS as $key => $factor) {
+            $options[$key] = [
+                'label' => self::LEVEL_LABELS[$key],
+                'score' => (int)round($criterion['weight'] * $factor),
+            ];
+        }
+
+        return $options;
+    }
+
+    private function normalizeLevel(string $criterionCode, string $option): string
+    {
+        $normalized = trim(strtolower($option));
+        if ($normalized === '') {
+            throw new InvalidArgumentException('Debe seleccionar una opción válida para: ' . (self::CRITERIA[$criterionCode]['name'] ?? $criterionCode));
+        }
+
+        if (isset(self::LEVEL_FACTORS[$normalized])) {
+            return $normalized;
+        }
+
+        $legacy = self::LEGACY_OPTION_MAP[$criterionCode][$normalized] ?? null;
+        if ($legacy !== null) {
+            return $legacy;
+        }
+
+        throw new InvalidArgumentException('Debe seleccionar una opción válida para: ' . (self::CRITERIA[$criterionCode]['name'] ?? $criterionCode));
     }
 
     public function buildPdf(array $reevaluation): string
@@ -113,8 +160,7 @@ class ReevaluationService
         ];
 
         foreach ($reevaluation['items'] as $item) {
-            $extra = $item['extra_value'] !== null ? ' (incumplimientos: ' . (int)$item['extra_value'] . ')' : '';
-            $lines[] = '- ' . $item['criterion_name'] . ': ' . $item['selected_label'] . $extra . ' => ' . (int)$item['item_score'];
+            $lines[] = '- ' . $item['criterion_name'] . ': ' . $item['selected_label'] . ' => ' . (int)$item['item_score'];
         }
 
         $stream = "BT\n/F1 10 Tf\n40 800 Td\n";

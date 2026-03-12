@@ -45,10 +45,11 @@ class ReevaluationController
         }
 
         $calc = $this->service->calculate([
-            'delivery_mode' => $_POST['delivery_mode'] ?? 'on_time',
-            'delivery_breaches' => $_POST['delivery_breaches'] ?? 0,
+            'delivery_time' => $_POST['delivery_time'] ?? ($_POST['delivery_mode'] ?? ''),
             'quality' => $_POST['quality'] ?? '',
             'after_sales' => $_POST['after_sales'] ?? '',
+            'sqr' => $_POST['sqr'] ?? '',
+            'documents' => $_POST['documents'] ?? '',
         ]);
 
         $user = $this->auth->user();
