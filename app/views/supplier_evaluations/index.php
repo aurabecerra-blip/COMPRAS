@@ -1,5 +1,29 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
+<?php
+$criterionOrder = ['delivery_time', 'quality', 'after_sales', 'sqr', 'documents'];
+$criterionNumbers = [
+    'delivery_time' => '1',
+    'quality' => '2',
+    'after_sales' => '3',
+    'sqr' => '4',
+    'documents' => '5',
+];
+$legacyToLevel = [
+    'on_time' => 'excellent',
+    'breach' => 'regular',
+    'meets' => 'excellent',
+    'not_meets' => 'deficient',
+    'full' => 'excellent',
+    'partial' => 'regular',
+    'none' => 'deficient',
+    'no_claims' => 'excellent',
+    'timely' => 'regular',
+    'untimely' => 'deficient',
+    'complete' => 'excellent',
+    'incomplete' => 'deficient',
+];
+?>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
         <p class="text-uppercase text-muted small mb-1">Módulo ISO · Evaluación de proveedores</p>
@@ -30,61 +54,18 @@
                         </select>
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label">1) Cumple con los tiempos de entrega (20%)</label>
-                        <div class="border rounded p-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="delivery_mode" id="delivery_on_time" value="on_time" checked>
-                                <label class="form-check-label" for="delivery_on_time">A tiempo (20 puntos)</label>
-                            </div>
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="radio" name="delivery_mode" id="delivery_breach" value="breach">
-                                <label class="form-check-label" for="delivery_breach">Incumplimiento (20 - 2 por cada incumplimiento)</label>
-                            </div>
-                            <div class="mt-2">
-                                <label class="form-label small">Cantidad de incumplimientos</label>
-                                <input type="number" min="0" name="delivery_breaches" class="form-control" value="0">
-                            </div>
+                    <?php foreach ($criterionOrder as $criterionCode): ?>
+                        <?php $criterion = $criteria[$criterionCode]; ?>
+                        <div class="col-12">
+                            <label class="form-label"><?= $criterionNumbers[$criterionCode] ?>) <?= htmlspecialchars($criterion['name']) ?> (<?= (int)$criterion['max_score'] ?> puntos)</label>
+                            <select name="<?= htmlspecialchars($criterionCode) ?>" class="form-select" required>
+                                <option value="">Seleccionar...</option>
+                                <?php foreach (($criterion['options'] ?? []) as $optionKey => $option): ?>
+                                    <option value="<?= htmlspecialchars($optionKey) ?>"><?= htmlspecialchars($option['label']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">2) Calidad del producto o servicio (40%)</label>
-                        <select name="quality" class="form-select" required>
-                            <option value="">Seleccionar...</option>
-                            <option value="meets">Cumple con los requisitos (40)</option>
-                            <option value="not_meets">No cumple (0)</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">3) Servicio postventa oportuno / garantías (10%)</label>
-                        <select name="after_sales" class="form-select" required>
-                            <option value="">Seleccionar...</option>
-                            <option value="full">Cumple oportunamente con todas las garantías y soporte técnico (10)</option>
-                            <option value="partial">Cumple parcialmente con las garantías y soporte técnico (5)</option>
-                            <option value="none">No cumple con las garantías ni brinda soluciones (0)</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">4) Atención oportuna a SQR (10%)</label>
-                        <select name="sqr" class="form-select" required>
-                            <option value="">Seleccionar...</option>
-                            <option value="no_claims">No se han presentado quejas, atiende oportunamente las solicitudes (10)</option>
-                            <option value="timely">Atiende oportunamente los reclamos (1 a 5 días) (5)</option>
-                            <option value="untimely">No atiende reclamos oportunamente (0)</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">5) Cumplimiento documental (20%)</label>
-                        <select name="documents" class="form-select" required>
-                            <option value="">Seleccionar...</option>
-                            <option value="complete">Cumple con todos los documentos solicitados (20)</option>
-                            <option value="incomplete">No envía documentos completos o demora (0)</option>
-                        </select>
-                    </div>
+                    <?php endforeach; ?>
 
                     <div class="col-12">
                         <label class="form-label">Observaciones</label>
@@ -205,8 +186,6 @@
             foreach (($selectedEvaluation['details'] ?? []) as $detail) {
                 $detailMap[$detail['criterion_code']] = $detail;
             }
-            $deliveryMode = (($detailMap['delivery_time']['option_key'] ?? '') === 'breach') ? 'breach' : 'on_time';
-            $deliveryBreaches = (int)($detailMap['delivery_time']['notes'] ?? 0);
             ?>
             <hr>
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -218,43 +197,21 @@
             <?php if ($isEditMode): ?>
             <form action="<?= htmlspecialchars(route_to('supplier_evaluation_update')) ?>" method="post" class="row g-2">
                 <input type="hidden" name="id" value="<?= (int)$selectedEvaluation['id'] ?>">
-                <div class="col-md-6">
-                    <label class="form-label">Cumple con tiempos (20%)</label>
-                    <select name="delivery_mode" class="form-select">
-                        <option value="on_time" <?= $deliveryMode === 'on_time' ? 'selected' : '' ?>>A tiempo</option>
-                        <option value="breach" <?= $deliveryMode === 'breach' ? 'selected' : '' ?>>Incumplimiento</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">N° incumplimientos</label>
-                    <input type="number" min="0" name="delivery_breaches" class="form-control" value="<?= $deliveryBreaches ?>">
-                </div>
-                <div class="col-md-6"><label class="form-label">Calidad</label>
-                    <select name="quality" class="form-select" required>
-                        <option value="meets" <?= (($detailMap['quality']['option_key'] ?? '') === 'meets') ? 'selected' : '' ?>>Cumple</option>
-                        <option value="not_meets" <?= (($detailMap['quality']['option_key'] ?? '') === 'not_meets') ? 'selected' : '' ?>>No cumple</option>
-                    </select>
-                </div>
-                <div class="col-md-6"><label class="form-label">Postventa</label>
-                    <select name="after_sales" class="form-select" required>
-                        <option value="full" <?= (($detailMap['after_sales']['option_key'] ?? '') === 'full') ? 'selected' : '' ?>>Cumple oportunamente</option>
-                        <option value="partial" <?= (($detailMap['after_sales']['option_key'] ?? '') === 'partial') ? 'selected' : '' ?>>Cumple parcialmente</option>
-                        <option value="none" <?= (($detailMap['after_sales']['option_key'] ?? '') === 'none') ? 'selected' : '' ?>>No cumple</option>
-                    </select>
-                </div>
-                <div class="col-md-6"><label class="form-label">SQR</label>
-                    <select name="sqr" class="form-select" required>
-                        <option value="no_claims" <?= (($detailMap['sqr']['option_key'] ?? '') === 'no_claims') ? 'selected' : '' ?>>Sin quejas</option>
-                        <option value="timely" <?= (($detailMap['sqr']['option_key'] ?? '') === 'timely') ? 'selected' : '' ?>>Atiende oportunamente</option>
-                        <option value="untimely" <?= (($detailMap['sqr']['option_key'] ?? '') === 'untimely') ? 'selected' : '' ?>>No atiende oportunamente</option>
-                    </select>
-                </div>
-                <div class="col-md-6"><label class="form-label">Documentación</label>
-                    <select name="documents" class="form-select" required>
-                        <option value="complete" <?= (($detailMap['documents']['option_key'] ?? '') === 'complete') ? 'selected' : '' ?>>Completa</option>
-                        <option value="incomplete" <?= (($detailMap['documents']['option_key'] ?? '') === 'incomplete') ? 'selected' : '' ?>>Incompleta</option>
-                    </select>
-                </div>
+                <?php foreach ($criterionOrder as $criterionCode): ?>
+                    <?php
+                    $criterion = $criteria[$criterionCode];
+                    $rawOption = (string)($detailMap[$criterionCode]['option_key'] ?? '');
+                    $selectedOption = $legacyToLevel[$rawOption] ?? $rawOption;
+                    ?>
+                    <div class="col-md-6">
+                        <label class="form-label"><?= htmlspecialchars($criterion['name']) ?></label>
+                        <select name="<?= htmlspecialchars($criterionCode) ?>" class="form-select" required>
+                            <?php foreach (($criterion['options'] ?? []) as $optionKey => $option): ?>
+                                <option value="<?= htmlspecialchars($optionKey) ?>" <?= $selectedOption === $optionKey ? 'selected' : '' ?>><?= htmlspecialchars($option['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endforeach; ?>
                 <div class="col-12"><label class="form-label">Observaciones</label>
                     <textarea name="observations" class="form-control" rows="3" maxlength="1000"><?= htmlspecialchars($selectedEvaluation['observations'] ?? '') ?></textarea>
                 </div>
