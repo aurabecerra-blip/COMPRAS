@@ -17,11 +17,21 @@ class SupplierRepository
                     AVG(q.lead_time_days) AS avg_lead_time,
                     COUNT(DISTINCT po.id) AS pos_count,
                     SUM(po.total_amount) AS pos_spend,
-                    SUM(po.status IN (\'CREADA\',\'ENVIADA_A_PROVEEDOR\',\'RECIBIDA_PARCIAL\')) AS open_pos
+                    SUM(po.status IN (\'CREADA\',\'ENVIADA_A_PROVEEDOR\',\'RECIBIDA_PARCIAL\')) AS open_pos,
+                    MAX(CASE WHEN ev.latest_evaluation_id IS NULL THEN 0 ELSE 1 END) AS has_evaluation,
+                    MAX(CASE WHEN sed.option_key IN (\'excellent\', \'complete\') THEN 1 ELSE 0 END) AS documents_complete
                 FROM suppliers s '
             . ($supportsLeader ? 'LEFT JOIN users u ON u.id = s.leader_user_id ' : '')
             . 'LEFT JOIN quotations q ON q.supplier_id = s.id
                 LEFT JOIN purchase_orders po ON po.supplier_id = s.id
+                LEFT JOIN (
+                    SELECT supplier_id, MAX(id) AS latest_evaluation_id
+                    FROM supplier_evaluations
+                    GROUP BY supplier_id
+                ) ev ON ev.supplier_id = s.id
+                LEFT JOIN supplier_evaluation_details sed
+                    ON sed.evaluation_id = ev.latest_evaluation_id
+                    AND sed.criterion_code = \'documents\'
                 WHERE 1 = 1';
 
         $params = [];

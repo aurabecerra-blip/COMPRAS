@@ -42,7 +42,7 @@
         <div class="table-responsive">
             <table class="table align-middle" id="suppliersTable">
                 <thead class="table-light">
-                    <tr><th>Nombre</th><th>NIT</th><th>Servicio</th><th>Líder</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th class="text-center">Cotizaciones</th><th class="text-center">OC</th><th class="text-center">OC Abiertas</th><th class="text-end">Monto OC</th><th class="text-end">Lead time prom.</th><th class="text-end">Acciones</th></tr>
+                    <tr><th>Nombre</th><th>NIT</th><th>Servicio</th><th>Líder</th><th>Estado evaluación</th><th>Documentos completos</th><th>Contacto</th><th>Email</th><th>Teléfono</th><th class="text-center">Cotizaciones</th><th class="text-center">OC</th><th class="text-center">OC Abiertas</th><th class="text-end">Monto OC</th><th class="text-end">Lead time prom.</th><th class="text-end">Acciones</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $s): ?>
@@ -51,6 +51,14 @@
                             <td><?= htmlspecialchars($s['nit'] ?? '') ?></td>
                             <td><?= htmlspecialchars($s['service'] ?? '') ?></td>
                             <td><?= htmlspecialchars($s['leader_name'] ?? 'Sin asignar') ?></td>
+                            <td>
+                                <?php if ((int)($s['has_evaluation'] ?? 0) === 1): ?>
+                                    <span class="badge bg-success-subtle text-success">Evaluado</span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger-subtle text-danger">Pendiente de evaluación</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= ((int)($s['documents_complete'] ?? 0) === 1) ? 'Sí' : 'No' ?></td>
                             <td><?= htmlspecialchars($s['contact']) ?></td>
                             <td><?= htmlspecialchars($s['email']) ?></td>
                             <td><?= htmlspecialchars($s['phone']) ?></td>
