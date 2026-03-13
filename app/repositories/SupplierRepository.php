@@ -7,7 +7,7 @@ class SupplierRepository
     {
     }
 
-    public function all(?int $leaderUserId = null): array
+    public function all(?int $leaderUserId = null, bool $onlyRegistered = false): array
     {
         $supportsLeader = $this->supportsLeaderUserColumn();
 
@@ -38,6 +38,11 @@ class SupplierRepository
         if ($supportsLeader && $leaderUserId !== null && $leaderUserId > 0) {
             $sql .= ' AND s.leader_user_id = ?';
             $params[] = $leaderUserId;
+        }
+
+        if ($onlyRegistered) {
+            $sql .= " AND COALESCE(TRIM(s.nit), '') <> ''"
+                . " AND COALESCE(TRIM(s.email), '') <> ''";
         }
 
         $sql .= ' GROUP BY s.id' . ($supportsLeader ? ', u.name' : '') . '
