@@ -43,6 +43,38 @@ class SupplierRepository
         $sql .= ' GROUP BY s.id' . ($supportsLeader ? ', u.name' : '') . '
                 ORDER BY s.name';
 
+        try {
+            $stmt = $this->db->pdo()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll();
+        } catch (Throwable) {
+            return $this->allBasic($supportsLeader, $leaderUserId);
+        }
+    }
+
+    private function allBasic(bool $supportsLeader, ?int $leaderUserId = null): array
+    {
+        $sql = 'SELECT s.*, '
+            . ($supportsLeader ? 'u.name AS leader_name' : 'NULL AS leader_name')
+            . ', 0 AS quotations_count,
+                NULL AS avg_lead_time,
+                0 AS pos_count,
+                NULL AS pos_spend,
+                0 AS open_pos,
+                0 AS has_evaluation,
+                0 AS documents_complete
+            FROM suppliers s '
+            . ($supportsLeader ? 'LEFT JOIN users u ON u.id = s.leader_user_id ' : '')
+            . 'WHERE 1 = 1';
+
+        $params = [];
+        if ($supportsLeader && $leaderUserId !== null && $leaderUserId > 0) {
+            $sql .= ' AND s.leader_user_id = ?';
+            $params[] = $leaderUserId;
+        }
+
+        $sql .= ' ORDER BY s.name';
+
         $stmt = $this->db->pdo()->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
