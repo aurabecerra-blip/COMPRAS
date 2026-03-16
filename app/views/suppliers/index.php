@@ -46,7 +46,11 @@
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $s): ?>
-                        <tr data-filter-value="<?= htmlspecialchars(mb_strtolower(trim(($s['name'] ?? '') . ' ' . ($s['nit'] ?? '') . ' ' . ($s['service'] ?? '') . ' ' . ($s['contact'] ?? '')))) ?>">
+                        <?php
+                        $filterValue = trim(($s['name'] ?? '') . ' ' . ($s['nit'] ?? '') . ' ' . ($s['service'] ?? '') . ' ' . ($s['contact'] ?? ''));
+                        $filterValue = function_exists('mb_strtolower') ? mb_strtolower($filterValue, 'UTF-8') : strtolower($filterValue);
+                        ?>
+                        <tr data-filter-value="<?= htmlspecialchars($filterValue) ?>">
                             <td class="fw-semibold"><?= htmlspecialchars($s['name']) ?></td>
                             <td><?= htmlspecialchars($s['nit'] ?? '') ?></td>
                             <td><?= htmlspecialchars($s['service'] ?? '') ?></td>
