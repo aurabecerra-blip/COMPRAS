@@ -71,21 +71,7 @@ class SupplierController
         $this->authMiddleware->check();
         $this->auth->requireRole(['compras', 'administrador']);
 
-        $id = (int)($_POST['id'] ?? 0);
-        if ($id <= 0) {
-            $this->flash->add('danger', 'Proveedor inválido para eliminar.');
-            header('Location: ' . route_to('suppliers'));
-            return;
-        }
-
-        try {
-            $this->repo->delete($id);
-            $this->audit->log($this->auth->user()['id'], 'supplier_delete', ['id' => $id]);
-            $this->flash->add('success', 'Proveedor eliminado.');
-        } catch (Throwable $e) {
-            $this->flash->add('danger', 'No se pudo eliminar el proveedor porque tiene registros asociados.');
-        }
-
+        $this->flash->add('warning', 'La base de proveedores no se elimina desde este módulo para proteger el histórico.');
         header('Location: ' . route_to('suppliers'));
     }
 
