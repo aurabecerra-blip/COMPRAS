@@ -2,6 +2,7 @@
 class SupplierRepository
 {
     private ?bool $hasLeaderUserColumn = null;
+    private ?bool $hasDocumentsCompleteColumn = null;
 
     public function __construct(private Database $db)
     {
@@ -10,6 +11,10 @@ class SupplierRepository
     public function all(?int $leaderUserId = null): array
     {
         $supportsLeader = $this->supportsLeaderUserColumn();
+        $supportsDocumentsComplete = $this->supportsDocumentsCompleteColumn();
+        $documentsSource = $supportsDocumentsComplete
+            ? 'COALESCE(s.documents_complete, 0)'
+            : 'MAX(CASE WHEN sed.option_key IN (\'excellent\', \'complete\') THEN 1 ELSE 0 END)';
 
         $sql = 'SELECT s.*, '
             . ($supportsLeader ? 'u.name AS leader_name,' : 'NULL AS leader_name,')
@@ -19,7 +24,7 @@ class SupplierRepository
                     SUM(po.total_amount) AS pos_spend,
                     SUM(po.status IN (\'CREADA\',\'ENVIADA_A_PROVEEDOR\',\'RECIBIDA_PARCIAL\')) AS open_pos,
                     MAX(CASE WHEN ev.latest_evaluation_id IS NULL THEN 0 ELSE 1 END) AS has_evaluation,
-                    MAX(CASE WHEN sed.option_key IN (\'excellent\', \'complete\') THEN 1 ELSE 0 END) AS documents_complete
+                    ' . $documentsSource . ' AS documents_complete
                 FROM suppliers s '
             . ($supportsLeader ? 'LEFT JOIN users u ON u.id = s.leader_user_id ' : '')
             . 'LEFT JOIN quotations q ON q.supplier_id = s.id
@@ -40,7 +45,7 @@ class SupplierRepository
             $params[] = $leaderUserId;
         }
 
-        $sql .= ' GROUP BY s.id' . ($supportsLeader ? ', u.name' : '') . '
+        $sql .= ' GROUP BY s.id' . ($supportsLeader ? ', u.name' : '') . ($supportsDocumentsComplete ? ', s.documents_complete' : '') . '
                 ORDER BY s.name';
 
         try {
@@ -54,6 +59,8 @@ class SupplierRepository
 
     private function allBasic(bool $supportsLeader, ?int $leaderUserId = null): array
     {
+        $supportsDocumentsComplete = $this->supportsDocumentsCompleteColumn();
+
         $sql = 'SELECT s.*, '
             . ($supportsLeader ? 'u.name AS leader_name' : 'NULL AS leader_name')
             . ', 0 AS quotations_count,
@@ -62,7 +69,7 @@ class SupplierRepository
                 NULL AS pos_spend,
                 0 AS open_pos,
                 0 AS has_evaluation,
-                0 AS documents_complete
+                ' . ($supportsDocumentsComplete ? 'COALESCE(s.documents_complete, 0)' : '0') . ' AS documents_complete
             FROM suppliers s '
             . ($supportsLeader ? 'LEFT JOIN users u ON u.id = s.leader_user_id ' : '')
             . 'WHERE 1 = 1';
@@ -114,26 +121,59 @@ class SupplierRepository
 
     public function create(array $data): void
     {
-        if ($this->supportsLeaderUserColumn()) {
-            $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, nit, service, contact, email, phone, leader_user_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
-            $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone'], $data['leader_user_id'] ?? null]);
-            return;
+        $supportsLeader = $this->supportsLeaderUserColumn();
+        $supportsDocumentsComplete = $this->supportsDocumentsCompleteColumn();
+
+        $columns = ['name', 'nit', 'service', 'contact', 'email', 'phone'];
+        $values = [$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone']];
+
+        if ($supportsLeader) {
+            $columns[] = 'leader_user_id';
+            $values[] = $data['leader_user_id'] ?? null;
         }
 
-        $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (name, nit, service, contact, email, phone, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
-        $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone']]);
+        if ($supportsDocumentsComplete) {
+            $columns[] = 'documents_complete';
+            $values[] = (int)($data['documents_complete'] ?? 0) === 1 ? 1 : 0;
+        }
+
+        $columns[] = 'created_at';
+        $placeholders = implode(', ', array_fill(0, count($columns) - 1, '?')) . ', NOW()';
+        $stmt = $this->db->pdo()->prepare('INSERT INTO suppliers (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ')');
+        $stmt->execute($values);
     }
 
     public function update(int $id, array $data): void
     {
-        if ($this->supportsLeaderUserColumn()) {
-            $stmt = $this->db->pdo()->prepare('UPDATE suppliers SET name = ?, nit = ?, service = ?, contact = ?, email = ?, phone = ?, leader_user_id = ? WHERE id = ?');
-            $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone'], $data['leader_user_id'] ?? null, $id]);
-            return;
+        $supportsLeader = $this->supportsLeaderUserColumn();
+        $supportsDocumentsComplete = $this->supportsDocumentsCompleteColumn();
+
+        $setParts = ['name = ?', 'nit = ?', 'service = ?', 'contact = ?', 'email = ?', 'phone = ?'];
+        $values = [$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone']];
+
+        if ($supportsLeader && array_key_exists('leader_user_id', $data)) {
+            $setParts[] = 'leader_user_id = ?';
+            $values[] = $data['leader_user_id'] ?? null;
         }
 
-        $stmt = $this->db->pdo()->prepare('UPDATE suppliers SET name = ?, nit = ?, service = ?, contact = ?, email = ?, phone = ? WHERE id = ?');
-        $stmt->execute([$data['name'], $data['nit'], $data['service'], $data['contact'], $data['email'], $data['phone'], $id]);
+        if ($supportsDocumentsComplete && array_key_exists('documents_complete', $data)) {
+            $setParts[] = 'documents_complete = ?';
+            $values[] = (int)($data['documents_complete'] ?? 0) === 1 ? 1 : 0;
+        }
+
+        $values[] = $id;
+        $stmt = $this->db->pdo()->prepare('UPDATE suppliers SET ' . implode(', ', $setParts) . ' WHERE id = ?');
+        $stmt->execute($values);
+    }
+
+    public function canAssignLeader(): bool
+    {
+        return $this->supportsLeaderUserColumn();
+    }
+
+    public function canManageDocumentsComplete(): bool
+    {
+        return $this->supportsDocumentsCompleteColumn();
     }
 
     public function delete(int $id): void
@@ -153,5 +193,18 @@ class SupplierRepository
         $this->hasLeaderUserColumn = (bool)$stmt->fetch();
 
         return $this->hasLeaderUserColumn;
+    }
+
+    private function supportsDocumentsCompleteColumn(): bool
+    {
+        if ($this->hasDocumentsCompleteColumn !== null) {
+            return $this->hasDocumentsCompleteColumn;
+        }
+
+        $stmt = $this->db->pdo()->prepare('SHOW COLUMNS FROM suppliers LIKE ?');
+        $stmt->execute(['documents_complete']);
+        $this->hasDocumentsCompleteColumn = (bool)$stmt->fetch();
+
+        return $this->hasDocumentsCompleteColumn;
     }
 }

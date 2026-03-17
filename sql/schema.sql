@@ -60,7 +60,10 @@ CREATE TABLE suppliers (
     contact VARCHAR(150),
     email VARCHAR(150),
     phone VARCHAR(50),
-    created_at DATETIME NOT NULL
+    leader_user_id INT NULL,
+    documents_complete TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY (leader_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE supplier_evaluations (
