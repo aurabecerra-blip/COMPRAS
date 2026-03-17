@@ -153,7 +153,12 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
         <?php if (!empty($files)): ?>
             <?php
             $pdfHistory = array_values(array_filter($files, static function (array $file): bool {
-                $path = strtolower((string)($file['file_path'] ?? ''));
+                $mimeType = strtolower(trim((string)($file['mime_type'] ?? '')));
+                if ($mimeType !== '' && str_contains($mimeType, 'pdf')) {
+                    return true;
+                }
+
+                $path = strtolower((string)parse_url((string)($file['file_path'] ?? ''), PHP_URL_PATH));
                 $name = strtolower((string)($file['original_name'] ?? ''));
 
                 return str_ends_with($path, '.pdf') || str_ends_with($name, '.pdf');
