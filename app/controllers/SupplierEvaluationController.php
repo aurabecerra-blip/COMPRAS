@@ -26,7 +26,7 @@ class SupplierEvaluationController
         $user = $this->auth->user();
         $leaderFilter = (($user['role'] ?? '') === 'lider') ? (int)$user['id'] : null;
 
-        $suppliers = $this->suppliers->all($leaderFilter);
+        $suppliers = $this->suppliers->all($leaderFilter, true);
         $criteria = $this->calculator->definitions();
         $evaluations = $this->evaluations->bySupplierAndDate($supplierId > 0 ? $supplierId : null, $from, $to, $leaderFilter);
 
