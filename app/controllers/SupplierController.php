@@ -11,6 +11,8 @@ class SupplierController
         $this->auth->requireRole(['compras', 'administrador']);
         $suppliers = $this->repo->all();
         $leaders = $this->users->activeByRoles(['lider', 'administrador']);
+        $canAssignLeader = $this->repo->canAssignLeader();
+        $canManageDocumentsComplete = $this->repo->canManageDocumentsComplete();
         include __DIR__ . '/../views/suppliers/index.php';
     }
 
@@ -25,8 +27,14 @@ class SupplierController
             'contact' => trim($_POST['contact'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
-            'leader_user_id' => (int)($_POST['leader_user_id'] ?? 0) ?: null,
         ];
+
+        if (isset($_POST['leader_user_id'])) {
+            $data['leader_user_id'] = (int)($_POST['leader_user_id'] ?? 0) ?: null;
+        }
+        if (isset($_POST['documents_complete'])) {
+            $data['documents_complete'] = (int)($_POST['documents_complete'] ?? 0) === 1 ? 1 : 0;
+        }
         if ($data['name'] === '') {
             $this->flash->add('danger', 'El nombre es obligatorio');
             header('Location: ' . route_to('suppliers'));
@@ -51,8 +59,14 @@ class SupplierController
             'contact' => trim($_POST['contact'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
-            'leader_user_id' => (int)($_POST['leader_user_id'] ?? 0) ?: null,
         ];
+
+        if (isset($_POST['leader_user_id'])) {
+            $data['leader_user_id'] = (int)($_POST['leader_user_id'] ?? 0) ?: null;
+        }
+        if (isset($_POST['documents_complete'])) {
+            $data['documents_complete'] = (int)($_POST['documents_complete'] ?? 0) === 1 ? 1 : 0;
+        }
 
         if ($id <= 0 || $data['name'] === '') {
             $this->flash->add('danger', 'Datos inválidos para editar proveedor.');
@@ -186,6 +200,7 @@ class SupplierController
                 'contact' => trim((string)($row[3] ?? '')),
                 'email' => trim((string)($row[4] ?? '')),
                 'phone' => trim((string)($row[5] ?? '')),
+                'documents_complete' => 0,
             ];
 
             $existing = $this->repo->findByName($data['name']);
