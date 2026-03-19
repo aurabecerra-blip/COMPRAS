@@ -74,6 +74,16 @@ $supplierEvaluationController = new SupplierEvaluationController(
     $auth,
     $authMiddleware
 );
+$supplierSelectionController = new SupplierSelectionController(
+    new PurchaseRequestRepository($db),
+    new SupplierRepository($db),
+    new SupplierSelectionRepository($db),
+    new SupplierSelectionService(),
+    $flash,
+    $audit,
+    $auth,
+    $authMiddleware
+);
 
 $adminController = new AdminController(
     $settingsRepo,
@@ -220,6 +230,19 @@ switch ($page) {
         break;
     case 'provider_selection_pdf':
         $providerSelectionController->pdf();
+        break;
+
+    case 'supplier_selection':
+        $supplierSelectionController->index();
+        break;
+    case 'supplier_selection_quote_store':
+        $supplierSelectionController->storeQuotation();
+        break;
+    case 'supplier_selection_decide':
+        $supplierSelectionController->decide();
+        break;
+    case 'supplier_selection_pdf':
+        $supplierSelectionController->pdf();
         break;
 
     case 'supplier_evaluations':
