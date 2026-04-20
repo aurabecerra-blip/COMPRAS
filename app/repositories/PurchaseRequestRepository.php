@@ -121,6 +121,54 @@ class PurchaseRequestRepository
         return $pr['title'] !== '' && $pr['justification'] !== '' && $pr['area'] !== '' && !empty($this->items((int)$pr['id']));
     }
 
+    public function removeDuplicateDrafts(): int
+    {
+        $pdo = $this->db->pdo();
+        $sql = 'SELECT pr.id
+                FROM purchase_requests pr
+                INNER JOIN (
+                    SELECT requester_id, title, justification, area, COALESCE(description, "") AS description, MIN(id) AS keep_id, COUNT(*) AS total
+                    FROM purchase_requests
+                    WHERE status = "BORRADOR"
+                    GROUP BY requester_id, title, justification, area, COALESCE(description, "")
+                    HAVING COUNT(*) > 1
+                ) dup ON dup.requester_id = pr.requester_id
+                    AND dup.title = pr.title
+                    AND dup.justification = pr.justification
+                    AND dup.area = pr.area
+                    AND dup.description = COALESCE(pr.description, "")
+                WHERE pr.status = "BORRADOR"
+                    AND pr.id <> dup.keep_id
+                    AND NOT EXISTS (SELECT 1 FROM quotations q WHERE q.purchase_request_id = pr.id)
+                    AND NOT EXISTS (SELECT 1 FROM purchase_orders po WHERE po.purchase_request_id = pr.id)';
+
+        $ids = $pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($ids)) {
+            return 0;
+        }
+
+        $ids = array_map('intval', $ids);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $pdo->beginTransaction();
+        try {
+            $deleteAttachments = $pdo->prepare("DELETE FROM attachments WHERE entity_type = 'purchase_request' AND entity_id IN ($placeholders)");
+            $deleteAttachments->execute($ids);
+
+            $deleteRequests = $pdo->prepare("DELETE FROM purchase_requests WHERE id IN ($placeholders)");
+            $deleteRequests->execute($ids);
+            $deleted = $deleteRequests->rowCount();
+
+            $pdo->commit();
+            return $deleted;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
     public function findByTracking(string $tracking): ?array
     {
         $stmt = $this->db->pdo()->prepare('SELECT pr.*, u.email AS requester_email FROM purchase_requests pr LEFT JOIN users u ON pr.requester_id = u.id WHERE tracking_code = ?');
