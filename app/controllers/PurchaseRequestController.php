@@ -21,6 +21,10 @@ class PurchaseRequestController
         $this->authMiddleware->check();
         $this->auth->requireRole(['solicitante', 'aprobador', 'compras', 'administrador']);
         $requests = $this->repo->all();
+        foreach ($requests as &$request) {
+            $request['items'] = $this->repo->items((int)$request['id']);
+        }
+        unset($request);
         include __DIR__ . '/../views/purchase_requests/index.php';
     }
 
@@ -144,6 +148,40 @@ class PurchaseRequestController
             $this->flash->add('success', 'Se eliminaron ' . $deleted . ' solicitudes repetidas en borrador.');
         } else {
             $this->flash->add('info', 'No se encontraron solicitudes repetidas para eliminar.');
+        }
+        header('Location: ' . route_to('purchase_requests'));
+    }
+
+    public function delete(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['solicitante', 'administrador']);
+        $id = (int)($_POST['id'] ?? 0);
+        $pr = $this->repo->find($id);
+        if (!$pr) {
+            $this->flash->add('danger', 'Solicitud no encontrada.');
+            header('Location: ' . route_to('purchase_requests'));
+            return;
+        }
+
+        $user = $this->auth->user();
+        $isAdmin = ($user['role'] ?? '') === 'administrador';
+        if (!$isAdmin && (int)($pr['requester_id'] ?? 0) !== (int)($user['id'] ?? 0)) {
+            $this->flash->add('danger', 'Solo puedes eliminar tus propias solicitudes.');
+            header('Location: ' . route_to('purchase_requests'));
+            return;
+        }
+        if (($pr['status'] ?? '') !== 'BORRADOR') {
+            $this->flash->add('danger', 'Solo se pueden eliminar solicitudes en borrador.');
+            header('Location: ' . route_to('purchase_requests'));
+            return;
+        }
+
+        if ($this->repo->deleteDraft($id)) {
+            $this->audit->log($user['id'], 'pr_delete', ['pr_id' => $id]);
+            $this->flash->add('success', 'Solicitud eliminada.');
+        } else {
+            $this->flash->add('danger', 'No se pudo eliminar la solicitud.');
         }
         header('Location: ' . route_to('purchase_requests'));
     }
