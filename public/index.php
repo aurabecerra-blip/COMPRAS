@@ -167,6 +167,9 @@ switch ($page) {
     case 'purchase_request_remove_duplicates':
         $prController->removeDuplicates();
         break;
+    case 'purchase_request_delete':
+        $prController->delete();
+        break;
     case 'purchase_request_select_supplier':
         $prController->selectSupplier();
         break;

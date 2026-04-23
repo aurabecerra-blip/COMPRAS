@@ -33,6 +33,7 @@ $statusBadges = [
                 </thead>
                 <tbody>
                     <?php foreach ($requests as $r): ?>
+                        <?php $canManageDraft = $r['status'] === 'BORRADOR' && in_array($auth->user()['role'], ['solicitante', 'administrador'], true); ?>
                         <tr>
                             <td class="text-muted">#<?= $r['id'] ?></td>
                             <td><span class="badge bg-dark-subtle text-dark"><?= htmlspecialchars($r['tracking_code'] ?? 'N/A') ?></span></td>
@@ -42,7 +43,13 @@ $statusBadges = [
                             <td><?= $r['created_at'] ?></td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <a class="btn btn-outline-secondary" href="<?= htmlspecialchars(route_to('purchase_request_edit', ['id' => $r['id']])) ?>"><i class="bi bi-pencil-square"></i></a>
+                                    <?php if ($canManageDraft): ?>
+                                        <a class="btn btn-outline-secondary" href="<?= htmlspecialchars(route_to('purchase_request_edit', ['id' => $r['id']])) ?>"><i class="bi bi-pencil-square"></i> Editar</a>
+                                        <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_delete')) ?>" onsubmit="return confirm('¿Eliminar esta solicitud en borrador?');">
+                                            <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                                            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3"></i> Eliminar</button>
+                                        </form>
+                                    <?php endif; ?>
                                     <a class="btn btn-outline-primary" href="<?= htmlspecialchars(route_to('quotations', ['id' => $r['id']])) ?>"><i class="bi bi-card-checklist"></i></a>
                                     <a class="btn btn-outline-success" href="<?= htmlspecialchars(route_to('provider_selection', ['id' => $r['id']])) ?>" title="Cotizaciones y Selección de Proveedor"><i class="bi bi-clipboard2-check"></i></a>
                                     <a class="btn btn-outline-dark" href="<?= htmlspecialchars(route_to('track', ['code' => $r['tracking_code'] ?? ''])) ?>"><i class="bi bi-qr-code"></i></a>
@@ -66,6 +73,32 @@ $statusBadges = [
                                         </form>
                                     </div>
                                 <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr class="table-light">
+                            <td colspan="7">
+                                <div class="small text-muted mb-1">Detalle completo de la solicitud</div>
+                                <div><strong>Descripción:</strong> <?= nl2br(htmlspecialchars($r['description'] ?? '')) ?></div>
+                                <div><strong>Justificación:</strong> <?= nl2br(htmlspecialchars($r['justification'] ?? '')) ?></div>
+                                <div><strong>Área:</strong> <?= htmlspecialchars($r['area'] ?? '') ?></div>
+                                <?php if (!empty($r['cost_center'])): ?>
+                                    <div><strong>Centro de costo:</strong> <?= htmlspecialchars($r['cost_center']) ?></div>
+                                <?php endif; ?>
+                                <div class="mt-2">
+                                    <strong>Ítems solicitados:</strong>
+                                    <?php if (!empty($r['items'])): ?>
+                                        <ul class="mb-0 mt-1">
+                                            <?php foreach ($r['items'] as $item): ?>
+                                                <li>
+                                                    <?= htmlspecialchars($item['description'] ?? '') ?>
+                                                    (Cant.: <?= (float)($item['quantity'] ?? 0) ?>)
+                                                </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    <?php else: ?>
+                                        <span class="text-muted"> Sin ítems cargados.</span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

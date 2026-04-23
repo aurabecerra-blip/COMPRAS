@@ -169,6 +169,36 @@ class PurchaseRequestRepository
         }
     }
 
+    public function deleteDraft(int $id): bool
+    {
+        $pdo = $this->db->pdo();
+
+        $hasRelationsStmt = $pdo->prepare('SELECT
+                EXISTS(SELECT 1 FROM quotations WHERE purchase_request_id = ?) AS has_quotations,
+                EXISTS(SELECT 1 FROM purchase_orders WHERE purchase_request_id = ?) AS has_orders');
+        $hasRelationsStmt->execute([$id, $id]);
+        $relations = $hasRelationsStmt->fetch();
+        if (!$relations || (int)$relations['has_quotations'] === 1 || (int)$relations['has_orders'] === 1) {
+            return false;
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM attachments WHERE entity_type = "purchase_request" AND entity_id = ?')->execute([$id]);
+            $pdo->prepare('DELETE FROM purchase_request_items WHERE purchase_request_id = ?')->execute([$id]);
+            $deleteStmt = $pdo->prepare('DELETE FROM purchase_requests WHERE id = ? AND status = "BORRADOR"');
+            $deleteStmt->execute([$id]);
+            $deleted = $deleteStmt->rowCount() > 0;
+            $pdo->commit();
+            return $deleted;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
     public function findByTracking(string $tracking): ?array
     {
         $stmt = $this->db->pdo()->prepare('SELECT pr.*, u.email AS requester_email FROM purchase_requests pr LEFT JOIN users u ON pr.requester_id = u.id WHERE tracking_code = ?');
