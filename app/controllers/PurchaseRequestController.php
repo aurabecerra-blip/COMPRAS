@@ -134,6 +134,20 @@ class PurchaseRequestController
         header('Location: ' . route_to('purchase_requests'));
     }
 
+    public function removeDuplicates(): void
+    {
+        $this->authMiddleware->check();
+        $this->auth->requireRole(['solicitante', 'administrador']);
+        $deleted = $this->repo->removeDuplicateDrafts();
+        if ($deleted > 0) {
+            $this->audit->log($this->auth->user()['id'], 'pr_remove_duplicates', ['deleted' => $deleted]);
+            $this->flash->add('success', 'Se eliminaron ' . $deleted . ' solicitudes repetidas en borrador.');
+        } else {
+            $this->flash->add('info', 'No se encontraron solicitudes repetidas para eliminar.');
+        }
+        header('Location: ' . route_to('purchase_requests'));
+    }
+
     public function quotations(): void
     {
         $this->authMiddleware->check();

@@ -15,6 +15,11 @@ $statusBadges = [
         <p class="mb-0 text-muted">Trazabilidad, aprobación y transición a órdenes de compra.</p>
     </div>
     <div class="d-flex gap-2">
+        <?php if (in_array($auth->user()['role'], ['solicitante', 'administrador'], true)): ?>
+            <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_remove_duplicates')) ?>" onsubmit="return confirm('¿Eliminar solicitudes repetidas en borrador?');">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3"></i> Eliminar repetidas</button>
+            </form>
+        <?php endif; ?>
         <a href="<?= htmlspecialchars(route_to('track')) ?>" class="btn btn-light border"><i class="bi bi-qr-code"></i> Seguimiento</a>
         <a href="<?= htmlspecialchars(route_to('purchase_request_create')) ?>" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nueva PR</a>
     </div>
