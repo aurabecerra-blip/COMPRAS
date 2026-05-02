@@ -171,17 +171,11 @@ class PurchaseRequestController
             header('Location: ' . route_to('purchase_requests'));
             return;
         }
-        if (($pr['status'] ?? '') !== 'BORRADOR') {
-            $this->flash->add('danger', 'Solo se pueden eliminar solicitudes en borrador.');
-            header('Location: ' . route_to('purchase_requests'));
-            return;
-        }
-
         if ($this->repo->deleteDraft($id)) {
             $this->audit->log($user['id'], 'pr_delete', ['pr_id' => $id]);
             $this->flash->add('success', 'Solicitud eliminada.');
         } else {
-            $this->flash->add('danger', 'No se pudo eliminar la solicitud.');
+            $this->flash->add('danger', 'No se pudo eliminar la solicitud. Verifica que no tenga cotizaciones ni órdenes asociadas.');
         }
         header('Location: ' . route_to('purchase_requests'));
     }
