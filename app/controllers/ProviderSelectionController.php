@@ -225,6 +225,17 @@ class ProviderSelectionController
         }
 
         $absolutePath = $this->resolvePdfAbsolutePath((string)$evaluation['pdf_path']);
+        if ($absolutePath === '' && ($evaluation['status'] ?? '') === 'CLOSED') {
+            try {
+                $evaluation = $this->regeneratePdf($evaluation);
+            } catch (Throwable $e) {
+                http_response_code(500);
+                echo 'No fue posible regenerar el PDF';
+                return;
+            }
+            $absolutePath = $this->resolvePdfAbsolutePath((string)($evaluation['pdf_path'] ?? ''));
+        }
+
         if (!is_file($absolutePath)) {
             http_response_code(404);
             echo 'Archivo no disponible';

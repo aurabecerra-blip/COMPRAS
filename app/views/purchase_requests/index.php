@@ -45,11 +45,11 @@ $statusBadges = [
                                 <div class="btn-group btn-group-sm" role="group">
                                     <?php if ($canManageDraft): ?>
                                         <a class="btn btn-outline-secondary" href="<?= htmlspecialchars(route_to('purchase_request_edit', ['id' => $r['id']])) ?>"><i class="bi bi-pencil-square"></i> Editar</a>
-                                        <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_delete')) ?>" onsubmit="return confirm('¿Eliminar esta solicitud en borrador?');">
-                                            <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-                                            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3"></i> Eliminar</button>
-                                        </form>
                                     <?php endif; ?>
+                                    <form method="post" action="<?= htmlspecialchars(route_to('purchase_request_delete')) ?>" onsubmit="return confirm('¿Eliminar esta solicitud? Esta acción no se puede deshacer.');">
+                                        <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                                        <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3"></i> Eliminar</button>
+                                    </form>
                                     <a class="btn btn-outline-primary" href="<?= htmlspecialchars(route_to('quotations', ['id' => $r['id']])) ?>"><i class="bi bi-card-checklist"></i></a>
                                     <a class="btn btn-outline-success" href="<?= htmlspecialchars(route_to('provider_selection', ['id' => $r['id']])) ?>" title="Cotizaciones y Selección de Proveedor"><i class="bi bi-clipboard2-check"></i></a>
                                     <a class="btn btn-outline-dark" href="<?= htmlspecialchars(route_to('track', ['code' => $r['tracking_code'] ?? ''])) ?>"><i class="bi bi-qr-code"></i></a>

@@ -186,7 +186,7 @@ class PurchaseRequestRepository
         try {
             $pdo->prepare('DELETE FROM attachments WHERE entity_type = "purchase_request" AND entity_id = ?')->execute([$id]);
             $pdo->prepare('DELETE FROM purchase_request_items WHERE purchase_request_id = ?')->execute([$id]);
-            $deleteStmt = $pdo->prepare('DELETE FROM purchase_requests WHERE id = ? AND status = "BORRADOR"');
+            $deleteStmt = $pdo->prepare('DELETE FROM purchase_requests WHERE id = ?');
             $deleteStmt->execute([$id]);
             $deleted = $deleteStmt->rowCount() > 0;
             $pdo->commit();
