@@ -143,7 +143,7 @@ $statusLabels = [
                 <small class="text-muted">Se exige mínimo 3 cotizaciones de 3 proveedores distintos para poder seleccionar ganador.</small>
                 <div class="table-responsive mt-2">
                     <table class="table table-sm align-middle">
-                        <thead><tr><th>Proveedor</th><th>Total</th><th>Desc.</th><th>Entrega</th><th>Exp.</th><th>Pago</th><th>Postventa</th><th>Cert.</th><th>Evidencias</th></tr></thead>
+                        <thead><tr><th>Proveedor</th><th>Total</th><th>Desc.</th><th>Entrega</th><th>Exp.</th><th>Pago</th><th>Postventa</th><th>Cert.</th><th>PDF cotización</th><th>Evidencias</th></tr></thead>
                         <tbody>
                         <?php foreach ($quotations as $q): ?>
                             <tr>
@@ -155,6 +155,13 @@ $statusLabels = [
                                 <td><?= htmlspecialchars($q['evaluacion_pago']) ?></td>
                                 <td><?= htmlspecialchars($q['evaluacion_postventa']) ?></td>
                                 <td><?= ((int)$q['certificaciones_tecnicas'] || (int)$q['certificaciones_comerciales']) ? 'Sí' : 'No' ?></td>
+                                <td>
+                                    <?php if (!empty($q['archivo_cotizacion_url'])): ?>
+                                        <a target="_blank" href="<?= htmlspecialchars(asset_url((string)$q['archivo_cotizacion_url'])) ?>">Ver PDF</a>
+                                    <?php else: ?>
+                                        <span class="text-muted">No cargado</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php foreach ($q['files'] as $file): ?>
                                         <div><a target="_blank" href="<?= htmlspecialchars(asset_url($file['file_path'])) ?>"><?= htmlspecialchars($file['original_name']) ?></a></div>
