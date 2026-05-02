@@ -176,7 +176,7 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
                                 <td><?= htmlspecialchars((string)($pdf['created_at'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($pdf['provider_name'] ?? '')) ?></td>
                                 <td>#<?= (int)($pdf['quote_id'] ?? 0) ?></td>
-                                <td><a href="<?= htmlspecialchars((string)($pdf['file_path'] ?? '#')) ?>" target="_blank"><?= htmlspecialchars((string)($pdf['original_name'] ?? 'PDF')) ?></a></td>
+                                <td><a href="<?= htmlspecialchars(asset_url((string)($pdf['file_path'] ?? '#'))) ?>" target="_blank" download><?= htmlspecialchars((string)($pdf['original_name'] ?? 'PDF')) ?></a></td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -189,7 +189,7 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
                 <?php foreach ($files as $file): ?>
                     <li>
                         <?= htmlspecialchars($file['provider_name']) ?> -
-                        <a href="<?= htmlspecialchars($file['file_path']) ?>" target="_blank"><?= htmlspecialchars($file['original_name']) ?></a>
+                        <a href="<?= htmlspecialchars(asset_url((string)$file['file_path'])) ?>" target="_blank" download><?= htmlspecialchars($file['original_name']) ?></a>
                     </li>
                 <?php endforeach; ?>
             </ul>
