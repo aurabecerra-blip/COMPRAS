@@ -95,8 +95,8 @@ class PdfGeneratorService
 
         $this->drawText($stream, 140, 805, 11, $branding['company_name'], true, [$primaryR, $primaryG, $primaryB]);
         $this->drawText($stream, 140, 790, 9, 'NIT: ' . $branding['company_nit'], false, [0.20, 0.24, 0.32]);
-        $this->drawText($stream, 410, 805, 9, 'Versión: 02', false, [0.20, 0.24, 0.32]);
-        $this->drawText($stream, 410, 792, 9, 'Fecha: ' . date('d/m/Y'), false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 805, 9, 'Version 2', false, [0.20, 0.24, 0.32]);
+        $this->drawText($stream, 410, 792, 9, 'Fecha: 30 de enero de 2026', false, [0.20, 0.24, 0.32]);
         $this->drawText($stream, 410, 779, 9, 'Solicitud (PR): #' . $prId, false, [0.20, 0.24, 0.32]);
         $this->drawCenteredText($stream, 300, 758, 13, 'ANÁLISIS DE SELECCIÓN DE PROVEEDORES', true, [$primaryR, $primaryG, $primaryB]);
 
