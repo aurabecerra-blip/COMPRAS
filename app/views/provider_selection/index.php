@@ -125,6 +125,9 @@ foreach (($latestQuotesByProvider ?? []) as $quote) {
 <div class="card mb-3">
     <div class="card-body">
         <h5>Listado de cotizaciones</h5>
+        <div class="alert alert-warning py-2" role="alert">
+            A los proveedores que no han sido seleccionados, y solamente han sido evaluados, no los dejen en el listado de proveedores, debido a que solo enviaron una cotización pero no han sido ingresados como proveedor.
+        </div>
         <table class="table table-sm">
             <thead><tr><th>Proveedor</th><th>Tipo</th><th>Valor</th><th>Experiencia</th><th>Entrega</th><th>Pago</th><th>Re-cot.</th><th>Archivos</th><th>Acciones</th></tr></thead>
             <tbody>
