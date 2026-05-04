@@ -103,10 +103,10 @@ class SupplierController
             $messages = [
                 'selected_process' => 'No se puede eliminar porque el proveedor fue seleccionado en un proceso.',
                 'selected_request' => 'No se puede eliminar porque el proveedor fue seleccionado en una solicitud de compra.',
+                'selected_provider_evaluation' => 'No se puede eliminar porque el proveedor fue seleccionado en un proceso.',
                 'purchase_orders' => 'No se puede eliminar porque tiene órdenes de compra asociadas.',
                 'approved_requests' => 'No se puede eliminar porque tiene solicitudes aprobadas asociadas.',
                 'active_processes' => 'No se puede eliminar porque tiene procesos de selección activos asociados.',
-                'active_provider_evaluations' => 'No se puede eliminar porque tiene procesos activos de evaluación asociados.',
             ];
             $this->flash->add('danger', $messages[$e->getMessage()] ?? 'No se pudo eliminar el proveedor por una restricción de negocio.');
         } catch (Throwable $e) {
