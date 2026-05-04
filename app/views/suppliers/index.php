@@ -75,10 +75,9 @@
                                 <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editSupplierModal<?= (int)$s['id'] ?>">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <form method="post" action="<?= htmlspecialchars(route_to('supplier_delete')) ?>" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar este proveedor?');">
-                                    <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
-                                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                </form>
+                                <button class="btn btn-sm btn-outline-danger" type="button" disabled title="La base de proveedores no se elimina desde este módulo">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
