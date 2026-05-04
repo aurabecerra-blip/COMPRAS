@@ -208,13 +208,11 @@ class SupplierRepository
             }
         }
 
-        if ($this->supportsDeletedAtColumn()) {
-            $stmt = $pdo->prepare('UPDATE suppliers SET deleted_at = NOW() WHERE id = ?');
-            $stmt->execute([$id]);
-            return;
+        if (! $this->supportsDeletedAtColumn()) {
+            throw new RuntimeException('soft_delete_required');
         }
 
-        $stmt = $pdo->prepare('DELETE FROM suppliers WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE suppliers SET deleted_at = NOW() WHERE id = ?');
         $stmt->execute([$id]);
     }
 
