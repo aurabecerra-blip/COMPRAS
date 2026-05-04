@@ -3,6 +3,7 @@ class SupplierRepository
 {
     private ?bool $hasLeaderUserColumn = null;
     private ?bool $hasDocumentsCompleteColumn = null;
+    private ?bool $hasDeletedAtColumn = null;
 
     public function __construct(private Database $db)
     {
@@ -39,6 +40,10 @@ class SupplierRepository
                     AND sed.criterion_code = \'documents\'
                 WHERE 1 = 1';
 
+        if ($this->supportsDeletedAtColumn()) {
+            $sql .= ' AND s.deleted_at IS NULL';
+        }
+
         $params = [];
         if ($supportsLeader && $leaderUserId !== null && $leaderUserId > 0) {
             $sql .= ' AND s.leader_user_id = ?';
@@ -73,6 +78,12 @@ class SupplierRepository
             FROM suppliers s '
             . ($supportsLeader ? 'LEFT JOIN users u ON u.id = s.leader_user_id ' : '')
             . 'WHERE 1 = 1';
+
+        if ($supportsDocumentsComplete && $this->supportsDeletedAtColumn()) {
+            $sql .= ' AND s.deleted_at IS NULL';
+        } elseif ($this->supportsDeletedAtColumn()) {
+            $sql .= ' AND s.deleted_at IS NULL';
+        }
 
         $params = [];
         if ($supportsLeader && $leaderUserId !== null && $leaderUserId > 0) {
@@ -178,8 +189,46 @@ class SupplierRepository
 
     public function delete(int $id): void
     {
-        $stmt = $this->db->pdo()->prepare('DELETE FROM suppliers WHERE id = ?');
+        $pdo = $this->db->pdo();
+
+        $blockingChecks = [
+            'selected_process' => 'SELECT EXISTS(SELECT 1 FROM supplier_selection_processes WHERE winner_supplier_id = ?) AS blocked',
+            'selected_request' => 'SELECT EXISTS(SELECT 1 FROM purchase_requests WHERE selected_supplier_id = ?) AS blocked',
+            'purchase_orders' => 'SELECT EXISTS(SELECT 1 FROM purchase_orders WHERE supplier_id = ?) AS blocked',
+            'approved_requests' => 'SELECT EXISTS(SELECT 1 FROM purchase_requests WHERE selected_supplier_id = ? AND status = "APROBADA") AS blocked',
+            'active_processes' => 'SELECT EXISTS(SELECT 1 FROM supplier_selection_processes p INNER JOIN supplier_quotations q ON q.selection_process_id = p.id WHERE q.supplier_id = ? AND p.status <> "CERRADO") AS blocked',
+            'active_provider_evaluations' => 'SELECT EXISTS(SELECT 1 FROM provider_selection_scores s INNER JOIN provider_selection_evaluations e ON e.id = s.evaluation_id WHERE s.provider_id = ? AND e.status <> "CLOSED") AS blocked',
+        ];
+
+        foreach ($blockingChecks as $reason => $sql) {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$id]);
+            if ((int)$stmt->fetchColumn() === 1) {
+                throw new RuntimeException($reason);
+            }
+        }
+
+        if ($this->supportsDeletedAtColumn()) {
+            $stmt = $pdo->prepare('UPDATE suppliers SET deleted_at = NOW() WHERE id = ?');
+            $stmt->execute([$id]);
+            return;
+        }
+
+        $stmt = $pdo->prepare('DELETE FROM suppliers WHERE id = ?');
         $stmt->execute([$id]);
+    }
+
+    public function supportsDeletedAtColumn(): bool
+    {
+        if ($this->hasDeletedAtColumn !== null) {
+            return $this->hasDeletedAtColumn;
+        }
+
+        $stmt = $this->db->pdo()->prepare('SHOW COLUMNS FROM suppliers LIKE ?');
+        $stmt->execute(['deleted_at']);
+        $this->hasDeletedAtColumn = (bool)$stmt->fetch();
+
+        return $this->hasDeletedAtColumn;
     }
 
     private function supportsLeaderUserColumn(): bool
