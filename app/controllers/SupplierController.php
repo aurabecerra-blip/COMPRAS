@@ -107,6 +107,7 @@ class SupplierController
                 'purchase_orders' => 'No se puede eliminar porque tiene órdenes de compra asociadas.',
                 'approved_requests' => 'No se puede eliminar porque tiene solicitudes aprobadas asociadas.',
                 'active_processes' => 'No se puede eliminar porque tiene procesos de selección activos asociados.',
+                'soft_delete_required' => 'No se puede eliminar de forma segura porque falta la columna de baja lógica (deleted_at).',
             ];
             $this->flash->add('danger', $messages[$e->getMessage()] ?? 'No se pudo eliminar el proveedor por una restricción de negocio.');
         } catch (Throwable $e) {
