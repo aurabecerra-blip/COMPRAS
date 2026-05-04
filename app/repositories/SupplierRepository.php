@@ -100,14 +100,23 @@ class SupplierRepository
 
     public function find(int $id): ?array
     {
-        $stmt = $this->db->pdo()->prepare('SELECT * FROM suppliers WHERE id = ?');
+        $sql = 'SELECT * FROM suppliers WHERE id = ?';
+        if ($this->supportsDeletedAtColumn()) {
+            $sql .= ' AND deleted_at IS NULL';
+        }
+        $stmt = $this->db->pdo()->prepare($sql);
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;
     }
 
     public function findByName(string $name): ?array
     {
-        $stmt = $this->db->pdo()->prepare('SELECT * FROM suppliers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1');
+        $sql = 'SELECT * FROM suppliers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))';
+        if ($this->supportsDeletedAtColumn()) {
+            $sql .= ' AND deleted_at IS NULL';
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $this->db->pdo()->prepare($sql);
         $stmt->execute([$name]);
         return $stmt->fetch() ?: null;
     }
@@ -193,7 +202,6 @@ class SupplierRepository
 
         $blockingChecks = [
             'selected_process' => 'SELECT EXISTS(SELECT 1 FROM supplier_selection_processes WHERE winner_supplier_id = ?) AS blocked',
-            'selected_request' => 'SELECT EXISTS(SELECT 1 FROM purchase_requests WHERE selected_supplier_id = ?) AS blocked',
             'selected_provider_evaluation' => 'SELECT EXISTS(SELECT 1 FROM provider_selection_evaluations WHERE winner_provider_id = ?) AS blocked',
             'purchase_orders' => 'SELECT EXISTS(SELECT 1 FROM purchase_orders WHERE supplier_id = ?) AS blocked',
             'approved_requests' => 'SELECT EXISTS(SELECT 1 FROM purchase_requests WHERE selected_supplier_id = ? AND status = "APROBADA") AS blocked',
